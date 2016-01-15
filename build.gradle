@@ -1,0 +1,120 @@
+/*
+ * Copyright 2016 Danny Althoff
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import org.gradle.plugins.signing.Sign
+
+apply plugin: 'java'
+apply plugin: 'maven'
+apply plugin: 'signing'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile gradleApi()
+    compile files("${System.properties['java.home']}/../lib/ant-javafx.jar")
+}
+
+group = 'de.dynamicfiles.projects.gradle.plugins'
+archivesBaseName = 'javafx-gradle-plugin'
+version = '1.0-SNAPSHOT'
+
+ext.isReleaseVersion = !version.endsWith("SNAPSHOT")
+
+task javadocJar(type: Jar) {
+    classifier = 'javadoc'
+    from javadoc
+}
+
+task sourcesJar(type: Jar) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+artifacts {
+    archives jar
+    archives groovydocJar
+    archives sourcesJar
+}
+signing {
+    required { isReleaseVersion && gradle.taskGraph.hasTask("uploadArchives") }
+    sign configurations.archives
+}
+
+// read some information when required
+// https://docs.gradle.org/current/userguide/signing_plugin.html
+gradle.taskGraph.whenReady { taskGraph ->
+    if (taskGraph.allTasks.any { it instanceof Sign } && isReleaseVersion && gradle.taskGraph.hasTask("uploadArchives")) {
+        // Use Java 6's console to read from the console (no good for
+        // a CI environment)
+        Console console = System.console()
+        console.printf "\n\nWe have to sign some things in this build." +
+                       "\n\nPlease enter your signing details.\n\n"
+
+        def password = console.readPassword("PGP Private Key Password: ")
+
+        allprojects { ext."signing.password" = password }
+
+        console.printf "\nThanks.\n\n"
+    }
+}
+
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            if(isReleaseVersion) {
+                beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+            }
+            repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
+                authentication(userName: ossrhUsername, password: ossrhPassword)
+            }
+
+            snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
+                authentication(userName: ossrhUsername, password: ossrhPassword)
+            }
+
+            pom.project {
+                name 'javafx-gradle-plugin'
+                packaging 'jar'
+
+                description 'The JavaFX Gradle Plugin provides a way to to assemble distributable bundles for JavaFX applications from within Gradle. It provides a wrapper around the JavaFX packaging tools which are provided as part of the JavaFX installation.'
+                url 'https://github.com/FibreFoX/javafx-gradle-plugin'
+
+                scm {
+                    connection 'scm:git:git://github.com/FibreFoX/javafx-gradle-plugin.git'
+                    developerConnection 'scm:git:git@github.com:FibreFoX/javafx-gradle-plugin.git'
+                    url 'https://github.com/FibreFoX/javafx-gradle-plugin'
+                }
+
+                licenses {
+                    license {
+                        name 'The Apache License, Version 2.0'
+                        url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                        distribution 'repo'
+                    }
+                }
+
+                developers {
+                    developer {
+                        id 'FibreFoX'
+                        name 'Danny Althoff'
+                        email 'fibrefox@dynamicfiles.de'
+                    }
+                }
+            }
+        }
+    }
+}
