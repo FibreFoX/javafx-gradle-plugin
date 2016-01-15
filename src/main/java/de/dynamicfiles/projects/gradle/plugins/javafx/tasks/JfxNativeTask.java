@@ -22,6 +22,7 @@ import com.oracle.tools.packager.RelativeFileSet;
 import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.UnsupportedPlatformException;
 import de.dynamicfiles.projects.gradle.plugins.javafx.JavaFXGradlePluginExtension;
+import de.dynamicfiles.projects.gradle.plugins.javafx.converter.FileAssociation;
 import de.dynamicfiles.projects.gradle.plugins.javafx.converter.NativeLauncher;
 import java.io.File;
 import java.io.IOException;
@@ -224,10 +225,11 @@ public class JfxNativeTask extends JfxTask {
         if( duplicateLauncherNamesCheckSet.size() != launcherNames.size() ){
             throw new GradleException("Secondary launcher needs to have different name, please adjust appName inside your configuration.");
         }
-        /*
+
+        // create list for file associations (these are very tricky, because the bundlers behave differently)
         Optional.ofNullable(ext.getFileAssociations()).ifPresent(associations -> {
             final List<Map<String, ? super Object>> allAssociations = new ArrayList<>();
-            associations.stream().forEach(association -> {
+            associations.stream().map(associationMap -> getFileAssociation(associationMap)).forEach(association -> {
                 Map<String, ? super Object> settings = new HashMap<>();
                 settings.put(StandardBundlerParam.FA_DESCRIPTION.getID(), association.getDescription());
                 settings.put(StandardBundlerParam.FA_ICON.getID(), association.getIcon());
@@ -237,7 +239,6 @@ public class JfxNativeTask extends JfxTask {
             });
             params.put(StandardBundlerParam.FILE_ASSOCIATIONS.getID(), allAssociations);
         });
-         */
 
         // bugfix for "bundler not being able to produce native bundle without JRE on windows"
         if( isJavaVersion(8) && isAtLeastOracleJavaUpdateVersion(60) ){
@@ -352,6 +353,18 @@ public class JfxNativeTask extends JfxTask {
         } catch(IOException ex){
             project.getLogger().warn("Couldn't rename configfile. Please see issue #124 of the javafx-maven-plugin for further details.", ex);
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private FileAssociation getFileAssociation(Map<String, Object> rawMap) {
+        FileAssociation fileAssociation = new FileAssociation();
+        fileAssociation.setDescription((String) rawMap.get("description"));
+        fileAssociation.setExtensions((String) rawMap.get("extensions"));
+        fileAssociation.setContentType((String) rawMap.get("contentType"));
+        if( rawMap.get("icon") != null ){
+            fileAssociation.setIcon(new File((String) rawMap.get("icon")));
+        }
+        return fileAssociation;
     }
 
     @SuppressWarnings("unchecked")

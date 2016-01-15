@@ -58,8 +58,8 @@ public class JavaFXGradlePluginExtension {
     private String additionalAppResources = null;
     private boolean skipNativeLauncherWorkaround124 = false;
     private boolean skipNativeLauncherWorkaround167 = false;
-    private List<Map<String,Object>> secondaryLaunchers = null;
-    private List<Map<String,String>> fileAssociations = null;
+    private List<Map<String, Object>> secondaryLaunchers = null;
+    private List<Map<String, Object>> fileAssociations = null;
 
     /*
         generated methods below
@@ -272,7 +272,6 @@ public class JavaFXGradlePluginExtension {
         this.skipNativeLauncherWorkaround124 = skipNativeLauncherWorkaround124;
     }
 
-
     public boolean isSkipNativeLauncherWorkaround167() {
         return skipNativeLauncherWorkaround167;
     }
@@ -289,11 +288,11 @@ public class JavaFXGradlePluginExtension {
         this.secondaryLaunchers = secondaryLaunchers;
     }
 
-    public List<Map<String, String>> getFileAssociations() {
+    public List<Map<String, Object>> getFileAssociations() {
         return fileAssociations;
     }
 
-    public void setFileAssociations(List<Map<String, String>> fileAssociations) {
+    public void setFileAssociations(List<Map<String, Object>> fileAssociations) {
         this.fileAssociations = fileAssociations;
     }
 
