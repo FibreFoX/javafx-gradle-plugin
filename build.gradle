@@ -46,7 +46,7 @@ task sourcesJar(type: Jar) {
 }
 artifacts {
     archives jar
-    archives groovydocJar
+    archives javadocJar
     archives sourcesJar
 }
 signing {
