@@ -31,7 +31,7 @@ dependencies {
 
 group = 'de.dynamicfiles.projects.gradle.plugins'
 archivesBaseName = 'javafx-gradle-plugin'
-version = '1.0-SNAPSHOT'
+version = '1.0'
 
 ext.isReleaseVersion = !version.endsWith("SNAPSHOT")
 
@@ -50,14 +50,14 @@ artifacts {
     archives sourcesJar
 }
 signing {
-    required { isReleaseVersion && gradle.taskGraph.hasTask("uploadArchives") }
+    required { isReleaseVersion }
     sign configurations.archives
 }
 
 // read some information when required
 // https://docs.gradle.org/current/userguide/signing_plugin.html
 gradle.taskGraph.whenReady { taskGraph ->
-    if (taskGraph.allTasks.any { it instanceof Sign } && isReleaseVersion && gradle.taskGraph.hasTask("uploadArchives")) {
+    if (taskGraph.allTasks.any { it instanceof Sign } && isReleaseVersion ) {
         // Use Java 6's console to read from the console (no good for
         // a CI environment)
         Console console = System.console()
