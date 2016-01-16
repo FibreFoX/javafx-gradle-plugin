@@ -11,7 +11,7 @@ Example `build.gradle`, please adjust your parameters accordingly:
 ```groovy
 buildscript {
     dependencies {
-        classpath group: 'de.dynamicfiles.projects.gradle.plugins', name: 'javafx-gradle-plugin', version: '1.0-SNAPSHOT'
+        classpath group: 'de.dynamicfiles.projects.gradle.plugins', name: 'javafx-gradle-plugin', version: '1.0'
     }
 }
 
