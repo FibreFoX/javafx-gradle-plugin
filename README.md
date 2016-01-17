@@ -13,6 +13,10 @@ buildscript {
     dependencies {
         classpath group: 'de.dynamicfiles.projects.gradle.plugins', name: 'javafx-gradle-plugin', version: '1.0'
     }
+    
+    repositories {
+        mavenCentral()
+    }
 }
 
 apply plugin: 'java'
