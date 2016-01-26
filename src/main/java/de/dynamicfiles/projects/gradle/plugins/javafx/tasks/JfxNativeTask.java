@@ -102,12 +102,12 @@ public class JfxNativeTask extends JfxTask {
         });
         Optional.ofNullable(ext.getAdditionalAppResources())
                 .filter(appRessourcesString -> appRessourcesString != null)
-                .map(appRessourcesString -> new File(appRessourcesString))
+                .map(appRessourcesString -> new File(project.getProjectDir(), appRessourcesString))
                 .filter(File::exists)
                 .ifPresent(appResources -> {
                     project.getLogger().info("Copying additional app ressources...");
                     try{
-                        Path targetFolder = new File(ext.getJfxAppOutputDir()).toPath();
+                        Path targetFolder = new File(project.getProjectDir(), ext.getJfxAppOutputDir()).toPath();
                         Path sourceFolder = appResources.toPath();
                         Files.walkFileTree(appResources.toPath(), new FileVisitor<Path>() {
 
@@ -146,7 +146,7 @@ public class JfxNativeTask extends JfxTask {
         // adding all resource-files
         Set<File> resourceFiles = new HashSet<>();
         try{
-            Files.walk(new File(ext.getJfxAppOutputDir()).toPath())
+            Files.walk(new File(project.getProjectDir(), ext.getJfxAppOutputDir()).toPath())
                     .map(p -> p.toFile())
                     .filter(File::isFile)
                     .filter(File::canRead)
@@ -157,7 +157,7 @@ public class JfxNativeTask extends JfxTask {
         } catch(IOException e){
             project.getLogger().warn("There was a problem while processing application files.", e);
         }
-        params.put(StandardBundlerParam.APP_RESOURCES.getID(), new RelativeFileSet(new File(ext.getJfxAppOutputDir()), resourceFiles));
+        params.put(StandardBundlerParam.APP_RESOURCES.getID(), new RelativeFileSet(new File(project.getProjectDir(), ext.getJfxAppOutputDir()), resourceFiles));
 
         Collection<String> duplicateKeys = new HashSet<>();
         Optional.ofNullable(ext.getBundleArguments()).ifPresent(bArguments -> {
@@ -270,7 +270,7 @@ public class JfxNativeTask extends JfxTask {
             try{
                 Map<String, ? super Object> paramsToBundleWith = new HashMap<>(params);
                 if( b.validate(paramsToBundleWith) ){
-                    b.execute(paramsToBundleWith, new File(ext.getNativeOutputDir()));
+                    b.execute(paramsToBundleWith, new File(project.getProjectDir(), ext.getNativeOutputDir()));
 
                     // Workaround for "Native package for Ubuntu doesn't work"
                     // https://github.com/javafx-maven-plugin/javafx-maven-plugin/issues/124
@@ -344,8 +344,8 @@ public class JfxNativeTask extends JfxTask {
         }
         // rename .cfg-file (makes it able to create running applications again, even within installer)
         String newConfigFileName = appName.substring(0, appName.lastIndexOf("."));
-        File nativeOutputDir = new File(nativeOutputDirString);
-        Path appPath = nativeOutputDir.toPath().resolve(appName).resolve("app");
+        File nativeOutputDir = new File(project.getProjectDir(), nativeOutputDirString);
+        Path appPath = nativeOutputDir.toPath().toAbsolutePath().resolve(appName).resolve("app");
         String configfileExtension = ".cfg";
         Path oldConfigFile = appPath.resolve(appName + configfileExtension);
         try{

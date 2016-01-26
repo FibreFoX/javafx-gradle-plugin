@@ -93,13 +93,7 @@ public class JfxJarTask extends JfxTask {
         }
         createJarParams.setManifestAttrs(manifestAttributes);
 
-        final File libDir;
-        if( isDaemonMode() ){
-            libDir = new File(new File(project.getProjectDir(), ext.getJfxAppOutputDir()), "lib");
-        } else {
-            libDir = new File(ext.getJfxAppOutputDir(), "lib");
-        }
-
+        final File libDir = new File(new File(project.getProjectDir(), ext.getJfxAppOutputDir()), "lib");
         if( !libDir.exists() && !libDir.mkdirs() ){
             throw new GradleException("Unable to create app lib dir: " + libDir);
         }

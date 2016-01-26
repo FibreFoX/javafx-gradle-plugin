@@ -35,10 +35,7 @@ public abstract class JfxTask extends DefaultTask {
         // add deployDir to system classpath
         if( deployDir != null ){
 
-            File targetDeployDir = new File(deployDir);
-            if( isDaemonMode() ){
-                targetDeployDir = new File(project.getProjectDir(), deployDir);
-            }
+            File targetDeployDir = new File(project.getProjectDir(), deployDir);
             if( !targetDeployDir.exists() ){
                 project.getLogger().info("Adding 'deploy' directory wasn't successful, because it does not exist! (" + targetDeployDir.getAbsolutePath() + ")");
                 return;
@@ -54,11 +51,5 @@ public abstract class JfxTask extends DefaultTask {
                 throw new GradleException("Error, could not add URL to system classloader", ex);
             }
         }
-    }
-
-    protected boolean isDaemonMode() {
-        // when gradle runs within daemon-mode, the current folder is not the project-folder (as it is on non-daemon-mode).
-        String javaCommand = System.getProperty("sun.java.command");
-        return javaCommand != null && javaCommand.startsWith("org.gradle.launcher.daemon");
     }
 }
