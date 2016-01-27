@@ -76,7 +76,7 @@ public class JfxJarTask extends JfxTask {
         project.getLogger().info("Creating parameter-map for packager...");
 
         CreateJarParams createJarParams = new CreateJarParams();
-        createJarParams.setOutdir(new File(ext.getJfxAppOutputDir()));
+        createJarParams.setOutdir(new File(project.getProjectDir(), ext.getJfxAppOutputDir()));
 
         // check if we got some filename ending with ".jar"
         if( !ext.getJfxMainAppJarName().toLowerCase().endsWith(".jar") ){
