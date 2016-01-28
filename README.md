@@ -11,7 +11,7 @@ Example `build.gradle`, please adjust your parameters accordingly:
 ```groovy
 buildscript {
     dependencies {
-        classpath group: 'de.dynamicfiles.projects.gradle.plugins', name: 'javafx-gradle-plugin', version: '1.0'
+        classpath group: 'de.dynamicfiles.projects.gradle.plugins', name: 'javafx-gradle-plugin', version: '1.1'
     }
     
     repositories {
@@ -26,6 +26,7 @@ repositories {
 }
 
 dependencies{
+    // this dependency is only required when using UserJvmOptionsService
     compile files("${System.properties['java.home']}/../lib/packager.jar")
 }
 
@@ -44,7 +45,8 @@ jfx {
         // dont bundle JRE (not recommended, but increases build-size/-speed)
         runtime: null
     ]
-    bundler= "windows.app"
+    // to only use ONE bundler, you can specify it by name
+    // bundler= "windows.app"
     secondaryLaunchers = [[appName:"somethingDifferent"], [appName:"somethingDifferent2"]]
 }
 ```
