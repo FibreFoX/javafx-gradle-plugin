@@ -257,6 +257,25 @@ public class JfxNativeTask extends JfxTask {
             }
         }
 
+        // when running on "--daemon"-mode (which is the default while developing with gradle-supporting IDEs)
+        // and the runtime is not set to use "system-jre", there will be a problem when calling the clean-task
+        // because of some file descriptor leak which exists since 1.8.0_60
+        //
+        // for reference
+        // https://github.com/FibreFoX/javafx-gradle-plugin/issues/12
+        // https://bugs.openjdk.java.net/browse/JDK-8148717
+        // http://hg.openjdk.java.net/openjfx/8u40/rt/file/eb264cdc5828/modules/fxpackager/src/main/java/com/oracle/tools/packager/windows/WinAppBundler.java#l319
+        // http://hg.openjdk.java.net/openjfx/8u60/rt/file/996511a322b7/modules/fxpackager/src/main/java/com/oracle/tools/packager/windows/WinAppBundler.java#l325
+        // http://hg.openjdk.java.net/openjfx/9-dev/rt/file/7cae930f7a19/modules/fxpackager/src/main/java/com/oracle/tools/packager/windows/WinAppBundler.java#l374
+        String javaVersion = System.getProperty("java.version");
+        if( isGradleDaemonMode() && (javaVersion.startsWith("1.9") || javaVersion.startsWith("9.") || (isJavaVersion(8) && isAtLeastOracleJavaUpdateVersion(60))) ){
+            if( !params.containsKey("runtime") || params.get("runtime") != null ){
+                project.getLogger().lifecycle("Gradle is in daemon-mode, skipped executing bundler, because this would result in some error on clean-task. (JDK-8148717)");
+                project.getLogger().warn("Aborted jfxNative-task");
+                return;
+            }
+        }
+
         // run bundlers
         Bundlers bundlers = Bundlers.createBundlersInstance(); // service discovery?
         boolean foundBundler = false;

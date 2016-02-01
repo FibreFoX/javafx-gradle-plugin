@@ -52,4 +52,9 @@ public abstract class JfxTask extends DefaultTask {
             }
         }
     }
+
+    protected boolean isGradleDaemonMode() {
+        String javaCommand = System.getProperty("sun.java.command");
+        return javaCommand != null && javaCommand.startsWith("org.gradle.launcher.daemon");
+    }
 }
