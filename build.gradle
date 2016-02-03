@@ -19,6 +19,7 @@ import org.gradle.plugins.signing.Sign
 apply plugin: 'java'
 apply plugin: 'maven'
 apply plugin: 'signing'
+apply plugin: 'checkstyle'
 
 repositories {
     mavenCentral()
@@ -44,6 +45,17 @@ task sourcesJar(type: Jar) {
     classifier = 'sources'
     from sourceSets.main.allSource
 }
+
+// http://stackoverflow.com/a/22991189/1961102
+compileJava.dependsOn 'checkstyle'
+task checkstyle(type: Checkstyle) {
+    configFile file("${project.rootDir}/config/checkstyle/checkstyle.xml")
+    configProperties.checkstyleConfigDir = file("${project.rootDir}/config/checkstyle")
+    source 'src'
+    include '**/*.java'
+    classpath = files()
+}
+
 artifacts {
     archives jar
     archives javadocJar
