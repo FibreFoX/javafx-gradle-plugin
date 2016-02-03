@@ -50,3 +50,26 @@ jfx {
     secondaryLaunchers = [[appName:"somethingDifferent"], [appName:"somethingDifferent2"]]
 }
 ```
+
+Last Release Notes
+==================
+
+**Version 1.1 (28-Jan-2016)**
+
+Bugfixes:
+* fixed project-relative path-problems mostly regarding multi-module projects
+
+New:
+* added support for gradle daemon-mode
+
+Knowh bugs:
+* on windows: when calling task jfxNative you can't call task clean, because there is a possible file descriptor leak (see issue #12)
+
+There will be some examples with the next updates/releases, but this is a spare-time project so please just try it out, not yet recommended for production.
+
+
+(Not yet) Release(d) Notes
+==================
+
+upcoming Version 1.2 (??-2016)
+* added workaround for issue #12 regarding [file descriptor leak inside the JDK starting from 1.8.0_60](https://bugs.openjdk.java.net/browse/JDK-8148717)
