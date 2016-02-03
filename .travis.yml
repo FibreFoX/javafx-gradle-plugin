@@ -4,8 +4,6 @@ jdk:
   - oraclejdk8
 
 # http://stackoverflow.com/questions/35128777/travis-ci-build-failed
-sudo: required
-
 before_install:
   - chmod +x gradlew
 
