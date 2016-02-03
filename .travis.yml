@@ -1,9 +1,13 @@
 language: java
 
+## http://blog.travis-ci.com/2015-10-14-opening-up-ubuntu-trusty-beta/
+sudo: required
+dist: trusty
+
 jdk:
   - oraclejdk8
 
-# http://stackoverflow.com/questions/35128777/travis-ci-build-failed
+# http://stackoverflow.com/questions/35128777/travis-ci-build-failed#comment58070003_35153221
 before_install:
   - chmod +x gradlew
 
