@@ -83,6 +83,10 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
         }
 
         ClassLoader buildscriptClassloader = project.getBuildscript().getClassLoader();
+        // when running tests, this should be handled ;)
+        if("org.gradle.internal.classloader.CachingClassLoader".equals(buildscriptClassloader.getClass().getName())){
+            return;
+        }
         URLClassLoader sysloader = (URLClassLoader) buildscriptClassloader;
 
         // only add, when not already existing

@@ -55,6 +55,10 @@ task checkstyle(type: Checkstyle) {
     include '**/*.java'
     classpath = files()
 }
+test {
+    useTestNG()
+    testLogging.showStandardStreams = true
+}
 
 artifacts {
     archives jar
