@@ -83,7 +83,13 @@ gradle.taskGraph.whenReady { taskGraph ->
         console.printf "\nThanks.\n\n"
     }
 }
-
+// http://stackoverflow.com/a/27741137/1961102
+if(!hasProperty('ossrhUsername')) {
+    ext.ossrhUsername = ''
+}
+if(!hasProperty('ossrhPassword')) {
+    ext.ossrhPassword = ''
+}
 uploadArchives {
     repositories {
         mavenDeployer {
