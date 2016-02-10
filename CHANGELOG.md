@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+# Version 1.2 (10-Feb-2016)
+
+New:
+* added workaround for issue #12 regarding [file descriptor leak inside the JDK starting from 1.8.0_60](https://bugs.openjdk.java.net/browse/JDK-8148717)
+
+As there seems to be no good way for having something like maven-invoker-plugin (which is used for the javafx-maven-plugin), I still need to find a nice way having buildable example-projects.
+
 
 # Version 1.1 (28-Jan-2016)
 

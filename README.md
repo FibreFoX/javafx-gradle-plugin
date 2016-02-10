@@ -9,12 +9,14 @@ I've never got green with gradle myself, but that didn't withhold me from doing 
 
 As this is my very first productive contact with gradle, please file separate issues so discuss the current solution.
 
-Example `build.gradle`, please adjust your parameters accordingly:
+# Example `build.gradle`
+
+Please adjust your parameters accordingly:
 
 ```groovy
 buildscript {
     dependencies {
-        classpath group: 'de.dynamicfiles.projects.gradle.plugins', name: 'javafx-gradle-plugin', version: '1.1'
+        classpath group: 'de.dynamicfiles.projects.gradle.plugins', name: 'javafx-gradle-plugin', version: '1.2'
     }
     
     repositories {
@@ -30,11 +32,12 @@ repositories {
 
 dependencies{
     // this dependency is only required when using UserJvmOptionsService
-    compile files("${System.properties['java.home']}/../lib/packager.jar")
+    // compile files("${System.properties['java.home']}/../lib/packager.jar")
 }
 
 apply plugin: 'javafx-gradle-plugin'
 
+// configure javafx-gradle-plugin
 jfx {
     verbose = true
     mainClass = 'com.something.cool.MainApp'
@@ -49,30 +52,27 @@ jfx {
         runtime: null
     ]
     // to only use ONE bundler, you can specify it by name
-    // bundler= "windows.app"
+    // bundler = "windows.app"
     secondaryLaunchers = [[appName:"somethingDifferent"], [appName:"somethingDifferent2"]]
 }
 ```
 
+To create jfx-jar just call `gradle jfxJar`, for creating native bundle just call `gradle jfxNative`.
+
+
 Last Release Notes
 ==================
 
-**Version 1.1 (28-Jan-2016)**
-
-Bugfixes:
-* fixed project-relative path-problems mostly regarding multi-module projects
+**Version 1.2 (10-Feb-2016)**
 
 New:
-* added support for gradle daemon-mode
+* added workaround for issue #12 regarding [file descriptor leak inside the JDK starting from 1.8.0_60](https://bugs.openjdk.java.net/browse/JDK-8148717)
 
-Knowh bugs:
-* on windows: when calling task jfxNative you can't call task clean, because there is a possible file descriptor leak (see issue #12)
-
-There will be some examples with the next updates/releases, but this is a spare-time project so please just try it out, not yet recommended for production.
+As there seems to be no good way for having something like maven-invoker-plugin (which is used for the javafx-maven-plugin), I still need to find a nice way having buildable example-projects.
 
 
 (Not yet) Release(d) Notes
 ==================
 
-upcoming Version 1.2 (??-2016)
-* added workaround for issue #12 regarding [file descriptor leak inside the JDK starting from 1.8.0_60](https://bugs.openjdk.java.net/browse/JDK-8148717)
+upcoming Version 1.3 (???-2016)
+*(nothing changed yet)*
