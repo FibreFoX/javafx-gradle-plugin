@@ -15,42 +15,37 @@
  */
 package de.dynamicfiles.projects.gradle.plugins.javafx.tests;
 
+import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.JfxJarTask;
+import java.util.Set;
 import org.gradle.api.Project;
+import org.gradle.api.Task;
 import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
+import org.gradle.api.artifacts.dsl.RepositoryHandler;
+import org.gradle.api.initialization.dsl.ScriptHandler;
 import org.gradle.testfixtures.ProjectBuilder;
-import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertTrue;
 import org.testng.annotations.Test;
 
 /**
  *
  * @author Danny Althoff
  */
-public class SimpleApply {
+public class CallJfxJar {
 
     @Test
-    public void testSimplePluginApply() {
+    public void callJfxJar() {
         Project project = ProjectBuilder.builder().build();
         DependencyHandler dependencyHandler = project.getDependencies();
+        ScriptHandler buildscript = project.getBuildscript();
+
+        RepositoryHandler repositories = buildscript.getRepositories();
+        repositories.add(repositories.mavenLocal());
+
         Dependency pluginDependency = dependencyHandler.create("de.dynamicfiles.projects.gradle.plugins:javafx-gradle-plugin:+");
-        project.getBuildscript().getDependencies().add("classpath", pluginDependency);
-        assertFalse(project.getPlugins().hasPlugin("java"));
+        buildscript.getDependencies().add("classpath", pluginDependency);
         project.getPluginManager().apply("java");
-        assertTrue(project.getPlugins().hasPlugin("java"));
-        assertFalse(project.getPlugins().hasPlugin("javafx-gradle-plugin"));
         project.getPluginManager().apply("javafx-gradle-plugin");
-        assertTrue(project.getPlugins().hasPlugin("javafx-gradle-plugin"));
+        // TODO
     }
 
-    @Test(expectedExceptions = org.gradle.api.GradleException.class)
-    public void testSimplePluginApply_missingJavaPlugin() {
-        Project project = ProjectBuilder.builder().build();
-        DependencyHandler dependencyHandler = project.getDependencies();
-        Dependency pluginDependency = dependencyHandler.create("de.dynamicfiles.projects.gradle.plugins:javafx-gradle-plugin:+");
-        project.getBuildscript().getDependencies().add("classpath", pluginDependency);
-        assertFalse(project.getPlugins().hasPlugin("java"));
-        assertFalse(project.getPlugins().hasPlugin("javafx-gradle-plugin"));
-        project.getPluginManager().apply("javafx-gradle-plugin");
-    }
 }
