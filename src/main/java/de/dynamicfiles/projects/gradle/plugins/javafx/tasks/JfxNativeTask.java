@@ -21,6 +21,9 @@ import com.oracle.tools.packager.ConfigException;
 import com.oracle.tools.packager.RelativeFileSet;
 import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.UnsupportedPlatformException;
+import com.sun.javafx.tools.packager.PackagerException;
+import com.sun.javafx.tools.packager.PackagerLib;
+import com.sun.javafx.tools.packager.SignJarParams;
 import de.dynamicfiles.projects.gradle.plugins.javafx.JavaFXGradlePluginExtension;
 import de.dynamicfiles.projects.gradle.plugins.javafx.converter.FileAssociation;
 import de.dynamicfiles.projects.gradle.plugins.javafx.converter.NativeLauncher;
@@ -31,6 +34,7 @@ import java.nio.file.FileVisitor;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -41,7 +45,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 import org.gradle.api.tasks.TaskAction;
@@ -51,6 +58,8 @@ import org.gradle.api.tasks.TaskAction;
  * @author Danny Althoff
  */
 public class JfxNativeTask extends JfxTask {
+
+    private static final String JNLP_JAR_PATTERN = "(.*)href=(\".*?\")(.*)size=(\".*?\")(.*)";
 
     @TaskAction
     public void jfxnative() {
@@ -319,11 +328,45 @@ public class JfxNativeTask extends JfxTask {
                         }
                     }
 
+                    if( "jnlp".equals(b.getID()) ){
+                        if( File.separator.equals("\\") ){
+                            // Workaround for "JNLP-generation: path for dependency-lib on windows with backslash"
+                            // https://github.com/javafx-maven-plugin/javafx-maven-plugin/issues/182
+                            // jnlp-bundler uses RelativeFileSet, and generates system-dependent dividers (\ on windows, / on others)
+                            project.getLogger().info("Applying workaround for oracle-jdk-bug since 1.8.0u60 regarding jar-path inside generated JNLP-files.");
+                            if( !ext.isSkipJNLPRessourcePathWorkaround182() ){
+                                fixPathsInsideJNLPFiles(ext);
+                            } else {
+                                project.getLogger().info("Skipped workaround for jar-paths jar-path inside generated JNLP-files.");
+                            }
+                        }
+
+                        // Do sign generated jar-files by calling the packager (this might change in the future,
+                        // hopefully when oracle reworked the process inside the JNLP-bundler.
+                        // https://github.com/javafx-maven-plugin/javafx-maven-plugin/issues/185
+                        if( params.containsKey("jnlp.allPermisions") && Boolean.parseBoolean(String.valueOf(params.get("jnlp.allPermisions"))) ){
+                            project.getLogger().info("Signing jar-files referenced inside generated JNLP-files.");
+                            if( !ext.isSkipSigningJarFilesJNLP185() ){
+                                signJarFiles(ext);
+                                if( !ext.isSkipSizeRecalculationForJNLP185() ){
+                                    project.getLogger().info("Fixing sizes of JAR files within JNLP-files");
+                                    fixFileSizesWithinGeneratedJNLPFiles(ext);
+                                } else {
+                                    project.getLogger().info("Skipped fixing sizes of JAR files within JNLP-files");
+                                }
+                            } else {
+                                project.getLogger().info("Skipped signing jar-files referenced inside JNLP-files.");
+                            }
+                        }
+                    }
+
                 }
             } catch(UnsupportedPlatformException e){
                 // quietly ignored
             } catch(ConfigException e){
                 project.getLogger().info("Skipping '" + b.getName() + "' because of configuration error '" + e.getMessage() + "'\nAdvice to fix: " + e.getAdvice());
+            } catch(PackagerException | GradleException ex){
+                throw new GradleException("Got exception while executing bundler.", ex);
             }
         }
         if( !foundBundler ){
@@ -372,6 +415,153 @@ public class JfxNativeTask extends JfxTask {
         } catch(IOException ex){
             project.getLogger().warn("Couldn't rename configfile. Please see issue #124 of the javafx-maven-plugin for further details.", ex);
         }
+    }
+
+    private void signJarFiles(JavaFXGradlePluginExtension ext) throws PackagerException, GradleException {
+        Project project = this.getProject();
+        File keyStore = new File(project.getProjectDir(), ext.getKeyStore());
+        if( !keyStore.exists() ){
+            throw new GradleException("Keystore does not exist (expected at: " + keyStore + ")");
+        }
+
+        if( ext.getKeyStoreAlias() == null || ext.getKeyStoreAlias().isEmpty() ){
+            throw new GradleException("A 'keyStoreAlias' is required for signing JARs");
+        }
+
+        if( ext.getKeyStorePassword() == null || ext.getKeyStorePassword().isEmpty() ){
+            throw new GradleException("A 'keyStorePassword' is required for signing JARs");
+        }
+
+        String keyPassword = ext.getKeyPassword();
+        if( keyPassword == null ){
+            keyPassword = ext.getKeyStorePassword();
+        }
+
+        SignJarParams signJarParams = new SignJarParams();
+        signJarParams.setVerbose(ext.isVerbose());
+        signJarParams.setKeyStore(keyStore);
+        signJarParams.setAlias(ext.getKeyStoreAlias());
+        signJarParams.setStorePass(ext.getKeyStorePassword());
+        signJarParams.setKeyPass(keyPassword);
+        signJarParams.setStoreType(ext.getKeyStoreType());
+
+        File nativeOutputDir = new File(project.getProjectDir(), ext.getNativeOutputDir());
+
+        signJarParams.addResource(nativeOutputDir, ext.getJfxMainAppJarName());
+
+        // add all gathered jar-files as resources so be signed
+        getJARFilesFromJNLPFiles(ext).forEach(jarFile -> signJarParams.addResource(nativeOutputDir, jarFile));
+
+        project.getLogger().info("Signing JAR files for webstart bundle");
+
+        new PackagerLib().signJar(signJarParams);
+    }
+
+    private List<File> getGeneratedJNLPFiles(JavaFXGradlePluginExtension ext) {
+        List<File> generatedFiles = new ArrayList<>();
+        Project project = this.getProject();
+
+        // try-ressource, because walking on files is lazy, resulting in file-handler left open otherwise
+        try(Stream<Path> walkstream = Files.walk(new File(project.getProjectDir(), ext.getNativeOutputDir()).toPath())){
+            walkstream.forEach(fileEntry -> {
+                File possibleJNLPFile = fileEntry.toFile();
+                String fileName = possibleJNLPFile.getName();
+                if( fileName.endsWith(".jnlp") ){
+                    generatedFiles.add(possibleJNLPFile);
+                }
+            });
+        } catch(IOException ignored){
+            // NO-OP
+        }
+
+        return generatedFiles;
+    }
+
+    private List<String> getJARFilesFromJNLPFiles(JavaFXGradlePluginExtension ext) {
+        List<String> jarFiles = new ArrayList<>();
+        getGeneratedJNLPFiles(ext).stream().map(jnlpFile -> jnlpFile.toPath()).forEach(jnlpPath -> {
+            try{
+                List<String> allLines = Files.readAllLines(jnlpPath);
+                allLines.stream().filter(line -> line.trim().startsWith("<jar href=")).forEach(line -> {
+                    String jarFile = line.replaceAll(JNLP_JAR_PATTERN, "$2");
+                    jarFiles.add(jarFile.substring(1, jarFile.length() - 1));
+                });
+            } catch(IOException ignored){
+                // NO-OP
+            }
+        });
+        return jarFiles;
+    }
+
+    private Map<String, Long> getFileSizes(JavaFXGradlePluginExtension ext, List<String> files) {
+        final Map<String, Long> fileSizes = new HashMap<>();
+        Project project = this.getProject();
+        files.stream().forEach(relativeFilePath -> {
+            File file = new File(new File(project.getProjectDir(), ext.getNativeOutputDir()), relativeFilePath);
+            // add the size for each file
+            fileSizes.put(relativeFilePath, file.length());
+        });
+        return fileSizes;
+    }
+
+    private void fixPathsInsideJNLPFiles(JavaFXGradlePluginExtension ext) {
+        List<File> generatedJNLPFiles = getGeneratedJNLPFiles(ext);
+        Pattern pattern = Pattern.compile(JNLP_JAR_PATTERN);
+        generatedJNLPFiles.forEach(file -> {
+            try{
+                List<String> allLines = Files.readAllLines(file.toPath());
+                List<String> newLines = new ArrayList<>();
+                allLines.stream().forEach(line -> {
+                    if( line.matches(JNLP_JAR_PATTERN) ){
+                        // get jar-file
+                        Matcher matcher = pattern.matcher(line);
+                        matcher.find();
+                        String rawJarName = matcher.group(2);
+                        // replace \ with /
+                        newLines.add(line.replace(rawJarName, rawJarName.replaceAll("\\\\", "\\/")));
+                    } else {
+                        newLines.add(line);
+                    }
+                });
+                Files.write(file.toPath(), newLines, StandardOpenOption.TRUNCATE_EXISTING);
+            } catch(IOException ignored){
+                // NO-OP
+            }
+        });
+    }
+
+    private void fixFileSizesWithinGeneratedJNLPFiles(JavaFXGradlePluginExtension ext) {
+        // after signing, we have to adjust sizes, because they have changed (since they are modified with the signature)
+        List<String> jarFiles = getJARFilesFromJNLPFiles(ext);
+        Map<String, Long> newFileSizes = getFileSizes(ext, jarFiles);
+        List<File> generatedJNLPFiles = getGeneratedJNLPFiles(ext);
+        Pattern pattern = Pattern.compile(JNLP_JAR_PATTERN);
+        generatedJNLPFiles.forEach(file -> {
+            try{
+                List<String> allLines = Files.readAllLines(file.toPath());
+                List<String> newLines = new ArrayList<>();
+                allLines.stream().forEach(line -> {
+                    if( line.matches(JNLP_JAR_PATTERN) ){
+                        // get jar-file
+                        Matcher matcher = pattern.matcher(line);
+                        matcher.find();
+                        String rawJarName = matcher.group(2);
+                        String jarName = rawJarName.substring(1, rawJarName.length() - 1);
+                        if( newFileSizes.containsKey(jarName) ){
+                            // replace old size with new one
+                            newLines.add(line.replace(matcher.group(4), "\"" + newFileSizes.get(jarName) + "\""));
+                        } else {
+                            newLines.add(line);
+                        }
+                    } else {
+                        newLines.add(line);
+                    }
+                });
+                Files.write(file.toPath(), newLines, StandardOpenOption.TRUNCATE_EXISTING);
+            } catch(IOException ignored){
+                // NO-OP
+            }
+        });
     }
 
     @SuppressWarnings("unchecked")

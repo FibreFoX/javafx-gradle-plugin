@@ -60,6 +60,15 @@ public class JavaFXGradlePluginExtension {
     private boolean skipNativeLauncherWorkaround167 = false;
     private List<Map<String, Object>> secondaryLaunchers = null;
     private List<Map<String, Object>> fileAssociations = null;
+    
+    private boolean skipJNLPRessourcePathWorkaround182 = false;
+    private String keyStore = "src/main/deploy/keystore.jks";
+    private String keyStoreAlias = "myalias";
+    private String keyStorePassword = "password";
+    private String keyPassword = null;
+    private String keyStoreType = "jks";
+    private boolean skipSigningJarFilesJNLP185 = false;
+    private boolean skipSizeRecalculationForJNLP185 = false;
 
     /*
         generated methods below
@@ -296,4 +305,68 @@ public class JavaFXGradlePluginExtension {
         this.fileAssociations = fileAssociations;
     }
 
+    public boolean isSkipJNLPRessourcePathWorkaround182() {
+        return skipJNLPRessourcePathWorkaround182;
+    }
+
+    public void setSkipJNLPRessourcePathWorkaround182(boolean skipJNLPRessourcePathWorkaround182) {
+        this.skipJNLPRessourcePathWorkaround182 = skipJNLPRessourcePathWorkaround182;
+    }
+
+    public String getKeyStore() {
+        return keyStore;
+    }
+
+    public void setKeyStore(String keyStore) {
+        this.keyStore = keyStore;
+    }
+
+    public String getKeyStoreAlias() {
+        return keyStoreAlias;
+    }
+
+    public void setKeyStoreAlias(String keyStoreAlias) {
+        this.keyStoreAlias = keyStoreAlias;
+    }
+
+    public String getKeyStorePassword() {
+        return keyStorePassword;
+    }
+
+    public void setKeyStorePassword(String keyStorePassword) {
+        this.keyStorePassword = keyStorePassword;
+    }
+
+    public String getKeyPassword() {
+        return keyPassword;
+    }
+
+    public void setKeyPassword(String keyPassword) {
+        this.keyPassword = keyPassword;
+    }
+
+    public String getKeyStoreType() {
+        return keyStoreType;
+    }
+
+    public void setKeyStoreType(String keyStoreType) {
+        this.keyStoreType = keyStoreType;
+    }
+
+    public boolean isSkipSigningJarFilesJNLP185() {
+        return skipSigningJarFilesJNLP185;
+    }
+
+    public void setSkipSigningJarFilesJNLP185(boolean skipSigningJarFilesJNLP185) {
+        this.skipSigningJarFilesJNLP185 = skipSigningJarFilesJNLP185;
+    }
+
+    public boolean isSkipSizeRecalculationForJNLP185() {
+        return skipSizeRecalculationForJNLP185;
+    }
+
+    public void setSkipSizeRecalculationForJNLP185(boolean skipSizeRecalculationForJNLP185) {
+        this.skipSizeRecalculationForJNLP185 = skipSizeRecalculationForJNLP185;
+    }
+    
 }
