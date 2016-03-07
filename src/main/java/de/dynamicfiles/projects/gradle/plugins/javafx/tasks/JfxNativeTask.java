@@ -417,18 +417,21 @@ public class JfxNativeTask extends JfxTask {
         }
     }
 
-    private void signJarFiles(JavaFXGradlePluginExtension ext) throws PackagerException, GradleException {
+    private void signJarFiles(JavaFXGradlePluginExtension ext) throws PackagerException {
         Project project = this.getProject();
         File keyStore = new File(project.getProjectDir(), ext.getKeyStore());
         if( !keyStore.exists() ){
+            project.getLogger().lifecycle("Keystore does not exist (expected at: " + keyStore + ")");
             throw new GradleException("Keystore does not exist (expected at: " + keyStore + ")");
         }
 
         if( ext.getKeyStoreAlias() == null || ext.getKeyStoreAlias().isEmpty() ){
+            project.getLogger().lifecycle("A 'keyStoreAlias' is required for signing JARs");
             throw new GradleException("A 'keyStoreAlias' is required for signing JARs");
         }
 
         if( ext.getKeyStorePassword() == null || ext.getKeyStorePassword().isEmpty() ){
+            project.getLogger().lifecycle("A 'keyStorePassword' is required for signing JARs");
             throw new GradleException("A 'keyStorePassword' is required for signing JARs");
         }
 
