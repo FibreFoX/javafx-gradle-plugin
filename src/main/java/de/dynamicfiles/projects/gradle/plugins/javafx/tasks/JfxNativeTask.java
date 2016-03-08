@@ -365,7 +365,7 @@ public class JfxNativeTask extends JfxTask {
                 // quietly ignored
             } catch(ConfigException e){
                 project.getLogger().info("Skipping '" + b.getName() + "' because of configuration error '" + e.getMessage() + "'\nAdvice to fix: " + e.getAdvice());
-            } catch(PackagerException | GradleException ex){
+            } catch(GradleException ex){
                 throw new GradleException("Got exception while executing bundler.", ex);
             }
         }
@@ -417,7 +417,7 @@ public class JfxNativeTask extends JfxTask {
         }
     }
 
-    private void signJarFiles(JavaFXGradlePluginExtension ext) throws PackagerException {
+    private void signJarFiles(JavaFXGradlePluginExtension ext) {
         Project project = this.getProject();
         File keyStore = new File(project.getProjectDir(), ext.getKeyStore());
         if( !keyStore.exists() ){
@@ -456,8 +456,11 @@ public class JfxNativeTask extends JfxTask {
         getJARFilesFromJNLPFiles(ext).forEach(jarFile -> signJarParams.addResource(nativeOutputDir, jarFile));
 
         project.getLogger().info("Signing JAR files for webstart bundle");
-
-        new PackagerLib().signJar(signJarParams);
+        try{
+            new PackagerLib().signJar(signJarParams);
+        } catch(PackagerException ex){
+            throw new GradleException("There was a problem while signing JAR files.", ex);
+        }
     }
 
     private List<File> getGeneratedJNLPFiles(JavaFXGradlePluginExtension ext) {
