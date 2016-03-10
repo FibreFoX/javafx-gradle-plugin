@@ -15,8 +15,10 @@
  */
 package de.dynamicfiles.projects.gradle.plugins.javafx;
 
+import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.JfxGenerateKeystoreTask;
 import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.JfxNativeTask;
 import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.JfxJarTask;
+import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.JfxRunTask;
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -43,6 +45,8 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
         // gradle is lame, so replace existing tasks with MY NAMES ! *battle-cry*
         JfxJarTask jarTask = project.getTasks().replace("jfxJar", JfxJarTask.class);
         JfxNativeTask nativeTask = project.getTasks().replace("jfxNative", JfxNativeTask.class);
+        JfxGenerateKeystoreTask generateKeystoreTask = project.getTasks().replace("jfxGenerateKeyStore", JfxGenerateKeystoreTask.class);
+        JfxRunTask runTask = project.getTasks().replace("jfxRun", JfxRunTask.class);
 
         String taskGroupName = "JavaFX";
 
@@ -53,6 +57,12 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
         nativeTask.setGroup(taskGroupName);
         nativeTask.setDescription("Create native JavaFX-bundle");
 
+        generateKeystoreTask.setGroup(taskGroupName);
+        generateKeystoreTask.setDescription("Create a Java keystore");
+
+        runTask.setGroup(taskGroupName);
+        runTask.setDescription("Start generated JavaFX-jar");
+
         // create jfx-jar only after jar-file was created (is this the right way?!?)
         if( project.getTasks().findByName("jar") == null ){
             throw new GradleException("Could not find jar-task. Please make sure you are applying the 'java'-plugin.");
@@ -62,6 +72,9 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
         // always create jfx-jar before creating native launcher/bundle
         // (in maven I had to implement a lifecycle for this ... mehhh)
         nativeTask.dependsOn(jarTask);
+
+        // to run our jfx-jar, we have to create it first ;)
+        runTask.dependsOn(jarTask);
 
         // extend project-model to get our settings/configuration via nice configuration
         project.getExtensions().create("jfx", JavaFXGradlePluginExtension.class);
@@ -84,7 +97,7 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
 
         ClassLoader buildscriptClassloader = project.getBuildscript().getClassLoader();
         // when running tests, this should be handled ;)
-        if("org.gradle.internal.classloader.CachingClassLoader".equals(buildscriptClassloader.getClass().getName())){
+        if( "org.gradle.internal.classloader.CachingClassLoader".equals(buildscriptClassloader.getClass().getName()) ){
             return;
         }
         URLClassLoader sysloader = (URLClassLoader) buildscriptClassloader;

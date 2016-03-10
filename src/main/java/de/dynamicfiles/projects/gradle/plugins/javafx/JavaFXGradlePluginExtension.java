@@ -60,7 +60,7 @@ public class JavaFXGradlePluginExtension {
     private boolean skipNativeLauncherWorkaround167 = false;
     private List<Map<String, Object>> secondaryLaunchers = null;
     private List<Map<String, Object>> fileAssociations = null;
-    
+
     private boolean skipJNLPRessourcePathWorkaround182 = false;
     private String keyStore = "src/main/deploy/keystore.jks";
     private String keyStoreAlias = "myalias";
@@ -69,6 +69,15 @@ public class JavaFXGradlePluginExtension {
     private String keyStoreType = "jks";
     private boolean skipSigningJarFilesJNLP185 = false;
     private boolean skipSizeRecalculationForJNLP185 = false;
+    private boolean noBlobSigning = false;
+
+    // GenerateKeyStoreMojo
+    private boolean overwriteKeyStore = false;
+    private String certDomain = null;
+    private String certOrgUnit = null;
+    private String certOrg = null;
+    private String certState = null;
+    private String certCountry = null;
 
     /*
         generated methods below
@@ -368,5 +377,61 @@ public class JavaFXGradlePluginExtension {
     public void setSkipSizeRecalculationForJNLP185(boolean skipSizeRecalculationForJNLP185) {
         this.skipSizeRecalculationForJNLP185 = skipSizeRecalculationForJNLP185;
     }
-    
+
+    public boolean isNoBlobSigning() {
+        return noBlobSigning;
+    }
+
+    public void setNoBlobSigning(boolean noBlobSigning) {
+        this.noBlobSigning = noBlobSigning;
+    }
+
+    public boolean isOverwriteKeyStore() {
+        return overwriteKeyStore;
+    }
+
+    public void setOverwriteKeyStore(boolean overwriteKeyStore) {
+        this.overwriteKeyStore = overwriteKeyStore;
+    }
+
+    public String getCertDomain() {
+        return certDomain;
+    }
+
+    public void setCertDomain(String certDomain) {
+        this.certDomain = certDomain;
+    }
+
+    public String getCertOrgUnit() {
+        return certOrgUnit;
+    }
+
+    public void setCertOrgUnit(String certOrgUnit) {
+        this.certOrgUnit = certOrgUnit;
+    }
+
+    public String getCertOrg() {
+        return certOrg;
+    }
+
+    public void setCertOrg(String certOrg) {
+        this.certOrg = certOrg;
+    }
+
+    public String getCertState() {
+        return certState;
+    }
+
+    public void setCertState(String certState) {
+        this.certState = certState;
+    }
+
+    public String getCertCountry() {
+        return certCountry;
+    }
+
+    public void setCertCountry(String certCountry) {
+        this.certCountry = certCountry;
+    }
+
 }

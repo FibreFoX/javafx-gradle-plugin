@@ -45,6 +45,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -347,7 +348,17 @@ public class JfxNativeTask extends JfxTask {
                         if( params.containsKey("jnlp.allPermisions") && Boolean.parseBoolean(String.valueOf(params.get("jnlp.allPermisions"))) ){
                             project.getLogger().info("Signing jar-files referenced inside generated JNLP-files.");
                             if( !ext.isSkipSigningJarFilesJNLP185() ){
-                                signJarFiles(ext);
+
+                                // JavaFX signing using BLOB method will get dropped on JDK 9: "blob signing is going away in JDK9. "
+                                // https://bugs.openjdk.java.net/browse/JDK-8088866?focusedCommentId=13889898#comment-13889898
+                                if( !ext.isNoBlobSigning() ){
+                                    project.getLogger().info("Signing jar-files using BLOB method.");
+                                    signJarFilesUsingBlobSigning(ext);
+                                } else {
+                                    project.getLogger().info("Signing jar-files using jarsigner.");
+                                    signJarFiles(ext);
+                                }
+
                                 if( !ext.isSkipSizeRecalculationForJNLP185() ){
                                     project.getLogger().info("Fixing sizes of JAR files within JNLP-files");
                                     fixFileSizesWithinGeneratedJNLPFiles(ext);
@@ -414,52 +425,6 @@ public class JfxNativeTask extends JfxTask {
             Files.move(oldConfigFile, appPath.resolve(newConfigFileName + configfileExtension), StandardCopyOption.ATOMIC_MOVE);
         } catch(IOException ex){
             project.getLogger().warn("Couldn't rename configfile. Please see issue #124 of the javafx-maven-plugin for further details.", ex);
-        }
-    }
-
-    private void signJarFiles(JavaFXGradlePluginExtension ext) {
-        Project project = this.getProject();
-        File keyStore = new File(project.getProjectDir(), ext.getKeyStore());
-        if( !keyStore.exists() ){
-            project.getLogger().lifecycle("Keystore does not exist (expected at: " + keyStore + ")");
-            throw new GradleException("Keystore does not exist (expected at: " + keyStore + ")");
-        }
-
-        if( ext.getKeyStoreAlias() == null || ext.getKeyStoreAlias().isEmpty() ){
-            project.getLogger().lifecycle("A 'keyStoreAlias' is required for signing JARs");
-            throw new GradleException("A 'keyStoreAlias' is required for signing JARs");
-        }
-
-        if( ext.getKeyStorePassword() == null || ext.getKeyStorePassword().isEmpty() ){
-            project.getLogger().lifecycle("A 'keyStorePassword' is required for signing JARs");
-            throw new GradleException("A 'keyStorePassword' is required for signing JARs");
-        }
-
-        String keyPassword = ext.getKeyPassword();
-        if( keyPassword == null ){
-            keyPassword = ext.getKeyStorePassword();
-        }
-
-        SignJarParams signJarParams = new SignJarParams();
-        signJarParams.setVerbose(ext.isVerbose());
-        signJarParams.setKeyStore(keyStore);
-        signJarParams.setAlias(ext.getKeyStoreAlias());
-        signJarParams.setStorePass(ext.getKeyStorePassword());
-        signJarParams.setKeyPass(keyPassword);
-        signJarParams.setStoreType(ext.getKeyStoreType());
-
-        File nativeOutputDir = new File(project.getProjectDir(), ext.getNativeOutputDir());
-
-        signJarParams.addResource(nativeOutputDir, ext.getJfxMainAppJarName());
-
-        // add all gathered jar-files as resources so be signed
-        getJARFilesFromJNLPFiles(ext).forEach(jarFile -> signJarParams.addResource(nativeOutputDir, jarFile));
-
-        project.getLogger().info("Signing JAR files for webstart bundle");
-        try{
-            new PackagerLib().signJar(signJarParams);
-        } catch(PackagerException ex){
-            throw new GradleException("There was a problem while signing JAR files.", ex);
         }
     }
 
@@ -601,5 +566,113 @@ public class JfxNativeTask extends JfxTask {
         launcher.setClasspath((String) rawMap.get("classpath"));
         launcher.setLauncherArguments((List<String>) rawMap.get("launcherArguments"));
         return launcher;
+    }
+
+    private void signJarFilesUsingBlobSigning(JavaFXGradlePluginExtension ext) {
+        checkSigningConfiguration(ext);
+
+        Project project = this.getProject();
+        File keyStore = new File(project.getProjectDir(), ext.getKeyStore());
+
+        SignJarParams signJarParams = new SignJarParams();
+        signJarParams.setVerbose(ext.isVerbose());
+        signJarParams.setKeyStore(keyStore);
+        signJarParams.setAlias(ext.getKeyStoreAlias());
+        signJarParams.setStorePass(ext.getKeyStorePassword());
+        signJarParams.setKeyPass(ext.getKeyPassword());
+        signJarParams.setStoreType(ext.getKeyStoreType());
+
+        File nativeOutputDir = new File(project.getProjectDir(), ext.getNativeOutputDir());
+
+        signJarParams.addResource(nativeOutputDir, ext.getJfxMainAppJarName());
+
+        // add all gathered jar-files as resources so be signed
+        getJARFilesFromJNLPFiles(ext).forEach(jarFile -> signJarParams.addResource(nativeOutputDir, jarFile));
+
+        project.getLogger().info("Signing JAR files for webstart bundle");
+        try{
+            new PackagerLib().signJar(signJarParams);
+        } catch(PackagerException ex){
+            throw new GradleException("There was a problem while signing JAR files.", ex);
+        }
+    }
+
+    private void signJarFiles(JavaFXGradlePluginExtension ext) {
+        checkSigningConfiguration(ext);
+
+        Project project = this.getProject();
+        File nativeOutputDir = new File(project.getProjectDir(), ext.getNativeOutputDir());
+        AtomicReference<GradleException> exception = new AtomicReference<>();
+        getJARFilesFromJNLPFiles(ext).stream().map(relativeJarFilePath -> new File(nativeOutputDir, relativeJarFilePath)).forEach(jarFile -> {
+            try{
+                // only sign when there wasn't already some problem
+                if( exception.get() == null ){
+                    signJar(ext, jarFile.getAbsoluteFile());
+                }
+            } catch(GradleException ex){
+                // rethrow later (same trick is done inside apache-tomee project ;D)
+                exception.set(ex);
+            }
+        });
+        if( exception.get() != null ){
+            throw exception.get();
+        }
+    }
+
+    private void checkSigningConfiguration(JavaFXGradlePluginExtension ext) {
+        Project project = this.getProject();
+        File keyStore = new File(project.getProjectDir(), ext.getKeyStore());
+        if( !keyStore.exists() ){
+            project.getLogger().lifecycle("Keystore does not exist (expected at: " + keyStore + ")");
+            throw new GradleException("Keystore does not exist (expected at: " + keyStore + ")");
+        }
+
+        if( ext.getKeyStoreAlias() == null || ext.getKeyStoreAlias().isEmpty() ){
+            project.getLogger().lifecycle("A 'keyStoreAlias' is required for signing JARs");
+            throw new GradleException("A 'keyStoreAlias' is required for signing JARs");
+        }
+
+        if( ext.getKeyStorePassword() == null || ext.getKeyStorePassword().isEmpty() ){
+            project.getLogger().lifecycle("A 'keyStorePassword' is required for signing JARs");
+            throw new GradleException("A 'keyStorePassword' is required for signing JARs");
+        }
+
+        String keyPassword = ext.getKeyPassword();
+        if( keyPassword == null ){
+            ext.setKeyPassword(ext.getKeyStorePassword());
+        }
+    }
+
+    private void signJar(JavaFXGradlePluginExtension ext, File jarFile) {
+        Project project = this.getProject();
+        File keyStore = new File(project.getProjectDir(), ext.getKeyStore());
+        List<String> command = new ArrayList<>();
+        command.add("jarsigner");
+        command.add("-strict");
+        command.add("-keystore");
+        command.add(keyStore.getAbsolutePath());
+        command.add("-storepass");
+        command.add(ext.getKeyStorePassword());
+        command.add("-keypass");
+        command.add(ext.getKeyPassword());
+        command.add(jarFile.getAbsolutePath());
+        command.add(ext.getKeyStoreAlias());
+        if( ext.isVerbose() ){
+            command.add("-verbose");
+        }
+
+        try{
+            ProcessBuilder pb = new ProcessBuilder()
+                    .inheritIO()
+                    .directory(project.getProjectDir())
+                    .command(command);
+            Process p = pb.start();
+            p.waitFor();
+            if( p.exitValue() != 0 ){
+                throw new GradleException("Signing jar using jarsigner wasn't successful! Please check build-log.");
+            }
+        } catch(IOException | InterruptedException ex){
+            throw new GradleException("There was an exception while signing jar-file: " + jarFile.getAbsolutePath(), ex);
+        }
     }
 }
