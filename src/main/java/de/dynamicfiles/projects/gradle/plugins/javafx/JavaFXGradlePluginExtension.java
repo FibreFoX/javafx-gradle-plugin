@@ -56,22 +56,22 @@ public class JavaFXGradlePluginExtension {
     private Map<String, String> bundleArguments = null;
     private String appName = null;
     private String additionalAppResources = null;
-    private boolean skipNativeLauncherWorkaround124 = false;
-    private boolean skipNativeLauncherWorkaround167 = false;
     private List<Map<String, Object>> secondaryLaunchers = null;
     private List<Map<String, Object>> fileAssociations = null;
-
+    private boolean skipNativeLauncherWorkaround124 = false;
+    private boolean skipNativeLauncherWorkaround167 = false;
     private boolean skipJNLPRessourcePathWorkaround182 = false;
-    private String keyStore = "src/main/deploy/keystore.jks";
-    private String keyStoreAlias = "myalias";
-    private String keyStorePassword = "password";
-    private String keyPassword = null;
-    private String keyStoreType = "jks";
     private boolean skipSigningJarFilesJNLP185 = false;
     private boolean skipSizeRecalculationForJNLP185 = false;
     private boolean noBlobSigning = false;
 
     // GenerateKeyStoreMojo
+    private String keyStore = "src/main/deploy/keystore.jks";
+    private String keyStoreAlias = "myalias";
+    private String keyStorePassword = "password";
+    private String keyPassword = null;
+    private String keyStoreType = "jks";
+
     private boolean overwriteKeyStore = false;
     private String certDomain = null;
     private String certOrgUnit = null;
