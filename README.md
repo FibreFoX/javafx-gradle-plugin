@@ -132,4 +132,5 @@ Next thing will be to create some tests and example-projects.
 
 upcoming Version 8.4.1 (???-2016)
 
-* nothing changed yet
+Bugfixes:
+* copy dependencies with runtime-scope (fixes #15)

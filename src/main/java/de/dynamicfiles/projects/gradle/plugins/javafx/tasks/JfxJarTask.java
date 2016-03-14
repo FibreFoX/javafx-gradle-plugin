@@ -135,14 +135,47 @@ public class JfxJarTask extends JfxTask {
             try{
                 Path artifactPath = someFile.toPath();
                 String artifactFileName = artifactPath.getFileName().toString();
-
-                /*
-                // Please install at least Java 1.8u40 for using this feature.
-                
-                dependencies {
-                    compile files("${System.properties['java.home']}/../lib/packager.jar")
+                if( "packager.jar".equals(artifactFileName) && !ext.isAddPackagerJar() ){
+                    this.getLogger().info("Skipped adding packager.jar.");
+                    return;
                 }
-                 */
+
+                // add this lib only, when not already present (could happen on file-dependencies ... which behaves different from maven-model)
+                if( !foundLibs.contains(artifactFileName) ){
+                    Files.copy(artifactPath, libDir.toPath().resolve(artifactFileName), StandardCopyOption.REPLACE_EXISTING);
+                    foundLibs.add(artifactFileName);
+                }
+            } catch(IOException ex){
+                project.getLogger().warn("Couldn't copy dependency " + someFile.getName(), ex);
+            }
+        });
+
+        Configuration runtimeConfiguration = project.getConfigurations().getByName("runtime");
+
+        project.getLogger().info("Copying defined runtime-dependencies...");
+
+        // this woll work for all non-file dependencies
+        runtimeConfiguration.getResolvedConfiguration().getFirstLevelModuleDependencies().forEach(resolvedDep -> {
+            // TODO add dependency-filter
+            resolvedDep.getAllModuleArtifacts().forEach(artifact -> {
+                try{
+                    Path artifactPath = artifact.getFile().toPath();
+                    String artifactFileName = artifactPath.getFileName().toString();
+                    Files.copy(artifactPath, libDir.toPath().resolve(artifactFileName), StandardCopyOption.REPLACE_EXISTING);
+                    // will only append, when everything went right
+                    foundLibs.add(artifactFileName);
+                } catch(IOException ex){
+                    project.getLogger().warn("Couldn't copy dependency " + artifact.getId().getComponentIdentifier().toString(), ex);
+                }
+            });
+        });
+
+        project.getLogger().info("Copying defined runtime-dependency-files...");
+        // inside "getFiles" all non-maven dependencies (like packager.jar) will be available
+        runtimeConfiguration.getResolvedConfiguration().getFiles(Specs.SATISFIES_ALL).forEach(someFile -> {
+            try{
+                Path artifactPath = someFile.toPath();
+                String artifactFileName = artifactPath.getFileName().toString();
                 if( "packager.jar".equals(artifactFileName) && !ext.isAddPackagerJar() ){
                     this.getLogger().info("Skipped adding packager.jar.");
                     return;
