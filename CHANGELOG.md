@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+# Version 8.4.1 (15-Mar-2016)
+
+Bugfixes:
+* copy dependencies with runtime-scope (fixes #15)
+
+
+
 # Version 8.4.0 (11-Mar-2016)
 
 New:

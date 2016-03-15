@@ -110,86 +110,12 @@ public class JfxJarTask extends JfxTask {
         // copy dependencies
         // got inspiration from: http://opensourceforgeeks.blogspot.de/2015/05/knowing-gradle-dependency-jars-download.html
         Configuration compileConfiguration = project.getConfigurations().getByName("compile");
-
-        project.getLogger().info("Copying defined compile-dependencies...");
-
-        // this woll work for all non-file dependencies
-        compileConfiguration.getResolvedConfiguration().getFirstLevelModuleDependencies().forEach(resolvedDep -> {
-            // TODO add dependency-filter
-            resolvedDep.getAllModuleArtifacts().forEach(artifact -> {
-                try{
-                    Path artifactPath = artifact.getFile().toPath();
-                    String artifactFileName = artifactPath.getFileName().toString();
-                    Files.copy(artifactPath, libDir.toPath().resolve(artifactFileName), StandardCopyOption.REPLACE_EXISTING);
-                    // will only append, when everything went right
-                    foundLibs.add(artifactFileName);
-                } catch(IOException ex){
-                    project.getLogger().warn("Couldn't copy dependency " + artifact.getId().getComponentIdentifier().toString(), ex);
-                }
-            });
-        });
-
-        project.getLogger().info("Copying defined compile-dependency-files...");
-        // inside "getFiles" all non-maven dependencies (like packager.jar) will be available
-        compileConfiguration.getResolvedConfiguration().getFiles(Specs.SATISFIES_ALL).forEach(someFile -> {
-            try{
-                Path artifactPath = someFile.toPath();
-                String artifactFileName = artifactPath.getFileName().toString();
-                if( "packager.jar".equals(artifactFileName) && !ext.isAddPackagerJar() ){
-                    this.getLogger().info("Skipped adding packager.jar.");
-                    return;
-                }
-
-                // add this lib only, when not already present (could happen on file-dependencies ... which behaves different from maven-model)
-                if( !foundLibs.contains(artifactFileName) ){
-                    Files.copy(artifactPath, libDir.toPath().resolve(artifactFileName), StandardCopyOption.REPLACE_EXISTING);
-                    foundLibs.add(artifactFileName);
-                }
-            } catch(IOException ex){
-                project.getLogger().warn("Couldn't copy dependency " + someFile.getName(), ex);
-            }
-        });
+        copyModuleDependencies(compileConfiguration, "compile", project, libDir, foundLibs);
+        copyFileDependencies(compileConfiguration, "compile", project, ext.isAddPackagerJar(), libDir, foundLibs);
 
         Configuration runtimeConfiguration = project.getConfigurations().getByName("runtime");
-
-        project.getLogger().info("Copying defined runtime-dependencies...");
-
-        // this woll work for all non-file dependencies
-        runtimeConfiguration.getResolvedConfiguration().getFirstLevelModuleDependencies().forEach(resolvedDep -> {
-            // TODO add dependency-filter
-            resolvedDep.getAllModuleArtifacts().forEach(artifact -> {
-                try{
-                    Path artifactPath = artifact.getFile().toPath();
-                    String artifactFileName = artifactPath.getFileName().toString();
-                    Files.copy(artifactPath, libDir.toPath().resolve(artifactFileName), StandardCopyOption.REPLACE_EXISTING);
-                    // will only append, when everything went right
-                    foundLibs.add(artifactFileName);
-                } catch(IOException ex){
-                    project.getLogger().warn("Couldn't copy dependency " + artifact.getId().getComponentIdentifier().toString(), ex);
-                }
-            });
-        });
-
-        project.getLogger().info("Copying defined runtime-dependency-files...");
-        // inside "getFiles" all non-maven dependencies (like packager.jar) will be available
-        runtimeConfiguration.getResolvedConfiguration().getFiles(Specs.SATISFIES_ALL).forEach(someFile -> {
-            try{
-                Path artifactPath = someFile.toPath();
-                String artifactFileName = artifactPath.getFileName().toString();
-                if( "packager.jar".equals(artifactFileName) && !ext.isAddPackagerJar() ){
-                    this.getLogger().info("Skipped adding packager.jar.");
-                    return;
-                }
-
-                // add this lib only, when not already present (could happen on file-dependencies ... which behaves different from maven-model)
-                if( !foundLibs.contains(artifactFileName) ){
-                    Files.copy(artifactPath, libDir.toPath().resolve(artifactFileName), StandardCopyOption.REPLACE_EXISTING);
-                    foundLibs.add(artifactFileName);
-                }
-            } catch(IOException ex){
-                project.getLogger().warn("Couldn't copy dependency " + someFile.getName(), ex);
-            }
-        });
+        copyModuleDependencies(runtimeConfiguration, "runtime", project, libDir, foundLibs);
+        copyFileDependencies(runtimeConfiguration, "runtime", project, ext.isAddPackagerJar(), libDir, foundLibs);
 
         if( !foundLibs.isEmpty() ){
             createJarParams.setClasspath("lib/" + String.join(" lib/", foundLibs));
@@ -237,4 +163,45 @@ public class JfxJarTask extends JfxTask {
         }
     }
 
+    private void copyModuleDependencies(Configuration configuration, String toPrint, Project project, final File libDir, List<String> foundLibs) {
+        project.getLogger().info("Copying defined " + toPrint + "-dependencies...");
+        // this woll work for all non-file dependencies
+        configuration.getResolvedConfiguration().getFirstLevelModuleDependencies().forEach(resolvedDep -> {
+            // TODO add dependency-filter
+            resolvedDep.getAllModuleArtifacts().forEach(artifact -> {
+                try{
+                    Path artifactPath = artifact.getFile().toPath();
+                    String artifactFileName = artifactPath.getFileName().toString();
+                    Files.copy(artifactPath, libDir.toPath().resolve(artifactFileName), StandardCopyOption.REPLACE_EXISTING);
+                    // will only append, when everything went right
+                    foundLibs.add(artifactFileName);
+                } catch(IOException ex){
+                    project.getLogger().warn("Couldn't copy dependency " + artifact.getId().getComponentIdentifier().toString(), ex);
+                }
+            });
+        });
+    }
+
+    private void copyFileDependencies(Configuration configuration, String toPrint, Project project, boolean isPackagerJarToBeAdded, final File libDir, List<String> foundLibs) {
+        project.getLogger().info("Copying defined " + toPrint + "-dependency-files...");
+        // inside "getFiles" all non-maven dependencies (like packager.jar) will be available
+        configuration.getResolvedConfiguration().getFiles(Specs.SATISFIES_ALL).forEach(someFile -> {
+            try{
+                Path artifactPath = someFile.toPath();
+                String artifactFileName = artifactPath.getFileName().toString();
+                if( "packager.jar".equals(artifactFileName) && !isPackagerJarToBeAdded ){
+                    this.getLogger().info("Skipped adding packager.jar.");
+                    return;
+                }
+
+                // add this lib only, when not already present (could happen on file-dependencies ... which behaves different from maven-model)
+                if( !foundLibs.contains(artifactFileName) ){
+                    Files.copy(artifactPath, libDir.toPath().resolve(artifactFileName), StandardCopyOption.REPLACE_EXISTING);
+                    foundLibs.add(artifactFileName);
+                }
+            } catch(IOException ex){
+                project.getLogger().warn("Couldn't copy dependency " + someFile.getName(), ex);
+            }
+        });
+    }
 }

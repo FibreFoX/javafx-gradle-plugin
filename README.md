@@ -112,17 +112,12 @@ Gradle Tasks
 Last Release Notes
 ==================
 
-**Version 8.4.0 (11-Mar-2016)**
+**Version 8.4.1 (15-Mar-2016)**
 
-New:
-* introduced `jfxRun` task
-* introduced `jfxGenerateKeyStore` task
-* added the ability to sign jar-files with normal jarsigner-method instead of the deprecated blob-signing method which was introduced with JavaFX
+Bugfixes:
+* copy dependencies with runtime-scope (fixes #15)
 
-Improvement:
-* added appveyor for building javafx-gradle-plugin on windows
-
-Starting with this release I will keep the [javafx-gradle-plugin](https://github.com/FibreFoX/javafx-gradle-plugin) and the [javafx-maven-plugin](https://github.com/javafx-maven-plugin/javafx-maven-plugin) in sync. This means, that you can compare the features of each plugin by comparing its major- and minor-version-number, I'm using [semantic versioning v2](http://semver.org/spec/v2.0.0.html).
+Starting with this 8.4.x-release I will keep the [javafx-gradle-plugin](https://github.com/FibreFoX/javafx-gradle-plugin) and the [javafx-maven-plugin](https://github.com/javafx-maven-plugin/javafx-maven-plugin) in sync. This means, that you can compare the features of each plugin by comparing its major- and minor-version-number, I'm using [semantic versioning v2](http://semver.org/spec/v2.0.0.html).
 
 Next thing will be to create some tests and example-projects.
 
@@ -130,7 +125,6 @@ Next thing will be to create some tests and example-projects.
 (Not yet) Release(d) Notes
 ==========================
 
-upcoming Version 8.4.1 (???-2016)
+upcoming Version 8.4.2 (???-2016)
 
-Bugfixes:
-* copy dependencies with runtime-scope (fixes #15)
+* nothing changed yet
