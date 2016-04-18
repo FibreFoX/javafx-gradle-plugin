@@ -542,7 +542,13 @@ public class JfxNativeTask extends JfxTask {
         fileAssociation.setExtensions((String) rawMap.get("extensions"));
         fileAssociation.setContentType((String) rawMap.get("contentType"));
         if( rawMap.get("icon") != null ){
-            fileAssociation.setIcon(new File((String) rawMap.get("icon")));
+            if( rawMap.get("icon") instanceof File ){
+                fileAssociation.setIcon((File) rawMap.get("icon"));
+            } else if( rawMap.get("icon") instanceof Path ){
+                fileAssociation.setIcon(((Path) rawMap.get("icon")).toAbsolutePath().toFile());
+            } else {
+                fileAssociation.setIcon(new File((String) rawMap.get("icon")));
+            }
         }
         return fileAssociation;
     }
