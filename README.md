@@ -127,4 +127,5 @@ Next thing will be to create some tests and example-projects.
 
 upcoming Version 8.4.2 (???-2016)
 
-* nothing changed yet
+New:
+* added new property to skip workaround for gradle daemon mode (which causes problems with the runtime-folder, see issue #12 for more information)

@@ -79,6 +79,8 @@ public class JavaFXGradlePluginExtension {
     private String certState = null;
     private String certCountry = null;
 
+    private boolean skipDaemonModeCheck = false;
+
     /*
         generated methods below
      */
@@ -432,6 +434,14 @@ public class JavaFXGradlePluginExtension {
 
     public void setCertCountry(String certCountry) {
         this.certCountry = certCountry;
+    }
+
+    public boolean isSkipDaemonModeCheck() {
+        return skipDaemonModeCheck;
+    }
+
+    public void setSkipDaemonModeCheck(boolean skipDaemonModeCheck) {
+        this.skipDaemonModeCheck = skipDaemonModeCheck;
     }
 
 }
