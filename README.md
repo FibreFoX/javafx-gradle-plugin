@@ -132,6 +132,8 @@ New:
 
 Bugfixes:
 * fixed some classloader-problem when using javafx-gradle-plugin in combination with Netbeans IDE having netbeans-gradle-plugin installed
+* updated workaround-detection for creating native bundles without JRE, because [it got fixed by latest Oracle JDK 1.8.0u92](http://www.oracle.com/technetwork/java/javase/2col/8u92-bugfixes-2949473.html)
 
 Enhancements:
 * made it possible to specify file-association icon as [String](http://docs.oracle.com/javase/8/docs/api/java/lang/String.html), [File](http://docs.oracle.com/javase/8/docs/api/java/io/File.html) or [Path](http://docs.oracle.com/javase/8/docs/api/java/nio/file/Path.html)
+* changed the way for adding `ant-javafx.jar` to the classloaders (by using more stuff provided by the gradle-api)
