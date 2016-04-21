@@ -23,7 +23,7 @@ import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import org.gradle.api.GradleException;
 import org.gradle.api.Plugin;
@@ -113,7 +113,7 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
 
         // add ant-javafx.jar to the classloader (using a different way as javafx-maven-plugin ;D)
         try{
-            List<URL> antJarList = Collections.emptyList();
+            List<URL> antJarList = new ArrayList<URL>();
             antJarList.add(jfxAntJar.toURI().toURL());
             // I really don't know, why there isn't a direct way to add some File... or just one URL,
             // but: no need to check if jar already was added ;) it's done inside
