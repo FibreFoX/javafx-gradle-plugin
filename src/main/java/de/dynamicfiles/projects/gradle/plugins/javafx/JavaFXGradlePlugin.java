@@ -20,11 +20,11 @@ import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.JfxNativeTask;
 import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.JfxJarTask;
 import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.JfxRunTask;
 import java.io.File;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.Collections;
+import java.util.List;
 import org.gradle.api.GradleException;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
@@ -34,6 +34,8 @@ import org.gradle.api.Project;
  * @author Danny Althoff
  */
 public class JavaFXGradlePlugin implements Plugin<Project> {
+
+    private static final String ANT_JAVAFX_JAR_FILENAME = "ant-javafx.jar";
 
     @Override
     public void apply(Project project) {
@@ -81,18 +83,18 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
     }
 
     private void addJavaFXAntJARToGradleBuildpath(Project project) {
-        String jfxAntJarPath = "/../lib/ant-javafx.jar";
+        String jfxAntJarPath = "/../lib/" + ANT_JAVAFX_JAR_FILENAME;
 
         // on java 9, we have a different path
         String javaVersion = System.getProperty("java.version");
         if( javaVersion.startsWith("1.9") || javaVersion.startsWith("9.") ){
-            jfxAntJarPath = "/lib/ant-javafx.jar";
+            jfxAntJarPath = "/lib/" + ANT_JAVAFX_JAR_FILENAME;
         }
 
         File jfxAntJar = new File(System.getProperty("java.home") + jfxAntJarPath);
 
         if( !jfxAntJar.exists() ){
-            throw new GradleException("Couldn't find Ant-JavaFX-Library, please make sure you have JDK (with JavaFX) installed.");
+            throw new GradleException("Couldn't find Ant-JavaFX-library, please make sure you've installed some JDK which includes JavaFX (e.g. OracleJDK or OpenJDK and OpenJFX), and JAVA_HOME is set properly.");
         }
 
         ClassLoader buildscriptClassloader = project.getBuildscript().getClassLoader();
@@ -109,25 +111,15 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
             sysloader = (URLClassLoader) buildscriptClassloader;
         }
 
-        // only add, when not already existing
-        boolean alreadyExisting = false;
-        for( URL url : sysloader.getURLs() ){
-            if( url.toExternalForm().endsWith("ant-javafx.jar") ){
-                alreadyExisting = true;
-            }
-        }
-        if( alreadyExisting ){
-            return;
-        }
-
-        // normal workaround like in javafx-maven-plugin ;)
-        Class<URLClassLoader> sysclass = URLClassLoader.class;
+        // add ant-javafx.jar to the classloader (using a different way as javafx-maven-plugin ;D)
         try{
-            Method method = sysclass.getDeclaredMethod("addURL", URL.class);
-            method.setAccessible(true);
-            method.invoke(sysloader, jfxAntJar.toURI().toURL());
-        } catch(NoSuchMethodException | SecurityException | MalformedURLException | IllegalAccessException | IllegalArgumentException | InvocationTargetException ex){
-            throw new GradleException("Error, could not add URL to system classloader", ex);
+            List<URL> antJarList = Collections.emptyList();
+            antJarList.add(jfxAntJar.toURI().toURL());
+            // I really don't know, why there isn't a direct way to add some File... or just one URL,
+            // but: no need to check if jar already was added ;) it's done inside
+            org.gradle.internal.classloader.ClasspathUtil.addUrl(sysloader, antJarList);
+        } catch(MalformedURLException ex){
+            throw new GradleException("Could not add Ant-JavaFX-JAR to plugin-classloader", ex);
         }
     }
 
