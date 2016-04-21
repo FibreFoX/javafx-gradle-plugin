@@ -96,9 +96,13 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
         }
 
         ClassLoader buildscriptClassloader = project.getBuildscript().getClassLoader();
-        // when running tests, this should be handled ;)
+        // when running inside IDE or while executing java-tests, this should be handled ;)
         if( "org.gradle.internal.classloader.CachingClassLoader".equals(buildscriptClassloader.getClass().getName()) ){
-            return;
+            // project.getBuildscript().getDependencies().add("classpath", project.files(jfxAntJar));
+            // would result into: org.gradle.api.InvalidUserDataException: Cannot change dependencies of configuration ':classpath' after it has been resolved.
+
+            // lets mess with the classloaders...
+            sysloader = (URLClassLoader) this.getClass().getClassLoader();
         }
         URLClassLoader sysloader = (URLClassLoader) buildscriptClassloader;
 

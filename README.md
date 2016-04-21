@@ -129,3 +129,4 @@ upcoming Version 8.4.2 (???-2016)
 
 New:
 * added new property to skip workaround for gradle daemon mode (which causes problems with the runtime-folder, see issue #12 for more information)
+* fixed some classloader-problem when using javafx-gradle-plugin in combination with Netbeans IDE having netbeans-gradle-plugin installed
