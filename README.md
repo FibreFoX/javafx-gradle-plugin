@@ -129,4 +129,9 @@ upcoming Version 8.4.2 (???-2016)
 
 New:
 * added new property to skip workaround for gradle daemon mode (which causes problems with the runtime-folder, see issue #12 for more information)
+
+Bugfixes:
 * fixed some classloader-problem when using javafx-gradle-plugin in combination with Netbeans IDE having netbeans-gradle-plugin installed
+
+Enhancements:
+* made it possible to specify file-association icon as [String](http://docs.oracle.com/javase/8/docs/api/java/lang/String.html), [File](http://docs.oracle.com/javase/8/docs/api/java/io/File.html) or [Path](http://docs.oracle.com/javase/8/docs/api/java/nio/file/Path.html)
