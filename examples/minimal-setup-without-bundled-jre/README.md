@@ -27,7 +27,7 @@ java(fx)packager is just a wrapper around these tools and the javafx-gradle-plug
 provided by the OpenJDK/OracleJDK.
 
 You can find the JavaFX-JAR-file at `build/jfx/app/project-jfx.jar` and you native launcher can be found at
-`build/jfx/native/minimal-setup-jfxnative/` while the installers reside below the `build/jfx/native/`-folder.
+`build/jfx/native/minimal-setup-without-bundled-jre/` while the installers reside below the `build/jfx/native/`-folder.
 
 Please read the official documentation of Oracle about the tools you are required to install for having
 installers be generated.
