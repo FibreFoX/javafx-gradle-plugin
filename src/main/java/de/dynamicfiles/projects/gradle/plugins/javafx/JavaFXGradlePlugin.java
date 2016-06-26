@@ -19,6 +19,7 @@ import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.JfxGenerateKeystoreT
 import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.JfxNativeTask;
 import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.JfxJarTask;
 import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.JfxRunTask;
+import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.internal.JavaDetectionTools;
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -86,8 +87,7 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
         String jfxAntJarPath = "/../lib/" + ANT_JAVAFX_JAR_FILENAME;
 
         // on java 9, we have a different path
-        String javaVersion = System.getProperty("java.version");
-        if( javaVersion.startsWith("1.9") || javaVersion.startsWith("9.") ){
+        if( JavaDetectionTools.IS_JAVA_9 ){
             jfxAntJarPath = "/lib/" + ANT_JAVAFX_JAR_FILENAME;
         }
 

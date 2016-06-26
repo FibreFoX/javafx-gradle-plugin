@@ -55,7 +55,7 @@ public class Workarounds {
         this.nativeOutputDir = nativeOutputDir;
     }
 
-    public Logger getLog() {
+    public Logger getLogger() {
         return logger;
     }
 
@@ -95,7 +95,7 @@ public class Workarounds {
         try{
             Files.move(oldConfigFile, appPath.resolve(newConfigFileName + CONFIG_FILE_EXTENSION), StandardCopyOption.ATOMIC_MOVE);
         } catch(IOException ex){
-            getLog().warn("Couldn't rename configfile. Please see issue #124 of the javafx-maven-plugin for further details.", ex);
+            getLogger().warn("Couldn't rename configfile. Please see issue #124 of the javafx-maven-plugin for further details.", ex);
         }
     }
 
@@ -223,16 +223,16 @@ public class Workarounds {
 
     public void applyWorkaround185(boolean skipSizeRecalculationForJNLP185) {
         if( !skipSizeRecalculationForJNLP185 ){
-            getLog().info("Fixing sizes of JAR files within JNLP-files");
+            getLogger().info("Fixing sizes of JAR files within JNLP-files");
             fixFileSizesWithinGeneratedJNLPFiles();
         } else {
-            getLog().info("Skipped fixing sizes of JAR files within JNLP-files");
+            getLogger().info("Skipped fixing sizes of JAR files within JNLP-files");
         }
     }
 
     public void applyWorkaround167(Map<String, Object> params) {
         if( params.containsKey("runtime") ){
-            getLog().info("Applying workaround for oracle-jdk-bug since 1.8.0u60 regarding cfg-file-format");
+            getLogger().info("Applying workaround for oracle-jdk-bug since 1.8.0u60 regarding cfg-file-format");
             // the problem is com.oracle.tools.packager.windows.WinAppBundler within createLauncherForEntryPoint-Method
             // it does NOT respect runtime-setting while calling "writeCfgFile"-method of com.oracle.tools.packager.AbstractImageBundler
             // since newer java versions (they added possability to have INI-file-format of generated cfg-file, since 1.8.0_60).
@@ -261,7 +261,7 @@ public class Workarounds {
             String newConfigFileName = appName.substring(0, appName.lastIndexOf("."));
             File mainAppNameCfgFile = appPath.resolve(newConfigFileName + CONFIG_FILE_EXTENSION).toFile();
             if( mainAppNameCfgFile.exists() ){
-                getLog().info("Found main native application configuration file (" + mainAppNameCfgFile.toString() + ").");
+                getLogger().info("Found main native application configuration file (" + mainAppNameCfgFile.toString() + ").");
             }
             filenameFixedConfigFiles.add(mainAppNameCfgFile);
         }
@@ -280,10 +280,10 @@ public class Workarounds {
 
         if( filenameFixedConfigFiles.isEmpty() ){
             // it wasn't required to apply this workaround
-            getLog().info("No workaround for native launcher issue 205 needed. Continuing.");
+            getLogger().info("No workaround for native launcher issue 205 needed. Continuing.");
             return;
         }
-        getLog().info("Applying workaround for native launcher issue 205 by modifying application resources.");
+        getLogger().info("Applying workaround for native launcher issue 205 by modifying application resources.");
 
         // since 1.8.0_60 there exists some APP_RESOURCES_LIST, which contains multiple RelativeFileSet-instances
         // this is the more easy way ;)
@@ -300,7 +300,7 @@ public class Workarounds {
                 // pre-update60 did not contain any list of RelativeFileSets, which requires to rework APP_RESOURCES :/
                 Path tempResourcesDirectory = Files.createTempDirectory("jfxmp-workaround205-").toAbsolutePath();
                 File tempResourcesDirAsFile = tempResourcesDirectory.toFile();
-                getLog().info("Modifying application resources for native launcher issue 205 by copying into temporary folder (" + tempResourcesDirAsFile.toString() + ").");
+                getLogger().info("Modifying application resources for native launcher issue 205 by copying into temporary folder (" + tempResourcesDirAsFile.toString() + ").");
                 for( RelativeFileSet sources : appResourcesList ){
                     File baseDir = sources.getBaseDirectory();
                     for( String fname : appResources.getIncludedFiles() ){
@@ -319,12 +319,12 @@ public class Workarounds {
                         .filter(File::isFile)
                         .filter(File::canRead)
                         .forEach(f -> {
-                            getLog().info(String.format("Add %s file to application resources.", f));
+                            getLogger().info(String.format("Add %s file to application resources.", f));
                             fixedResourceFiles.add(f);
                         });
                 params.put(StandardBundlerParam.APP_RESOURCES.getID(), new RelativeFileSet(tempResourcesDirAsFile, fixedResourceFiles));
             } catch(IOException ex){
-                getLog().warn(null, ex);
+                getLogger().warn(null, ex);
             }
             return;
         }
