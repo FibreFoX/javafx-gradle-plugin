@@ -27,6 +27,7 @@ import com.sun.javafx.tools.packager.SignJarParams;
 import de.dynamicfiles.projects.gradle.plugins.javafx.JavaFXGradlePluginExtension;
 import de.dynamicfiles.projects.gradle.plugins.javafx.converter.FileAssociation;
 import de.dynamicfiles.projects.gradle.plugins.javafx.converter.NativeLauncher;
+import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.internal.JavaDetectionTools;
 import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.internal.Workarounds;
 import java.io.File;
 import java.io.IOException;
@@ -277,8 +278,7 @@ public class JfxNativeTask extends JfxTask {
         // http://hg.openjdk.java.net/openjfx/8u40/rt/file/eb264cdc5828/modules/fxpackager/src/main/java/com/oracle/tools/packager/windows/WinAppBundler.java#l319
         // http://hg.openjdk.java.net/openjfx/8u60/rt/file/996511a322b7/modules/fxpackager/src/main/java/com/oracle/tools/packager/windows/WinAppBundler.java#l325
         // http://hg.openjdk.java.net/openjfx/9-dev/rt/file/7cae930f7a19/modules/fxpackager/src/main/java/com/oracle/tools/packager/windows/WinAppBundler.java#l374
-        String javaVersion = System.getProperty("java.version");
-        if( isGradleDaemonMode() && !ext.isSkipDaemonModeCheck() && (javaVersion.startsWith("1.9") || javaVersion.startsWith("9.") || (isJavaVersion(8) && isAtLeastOracleJavaUpdateVersion(60))) ){
+        if( isGradleDaemonMode() && !ext.isSkipDaemonModeCheck() && (JavaDetectionTools.IS_JAVA_9 || (JavaDetectionTools.IS_JAVA_8 && JavaDetectionTools.isAtLeastOracleJavaUpdateVersion(60))) ){
             if( !params.containsKey("runtime") || params.get("runtime") != null ){
                 project.getLogger().lifecycle("Gradle is in daemon-mode, skipped executing bundler, because this would result in some error on clean-task. (JDK-8148717)");
                 project.getLogger().warn("Aborted jfxNative-task");
@@ -307,7 +307,7 @@ public class JfxNativeTask extends JfxTask {
                     // Workaround for "Native package for Ubuntu doesn't work"
                     // https://github.com/javafx-maven-plugin/javafx-maven-plugin/issues/124
                     // real bug: linux-launcher from oracle-jdk starting from 1.8.0u40 logic to determine .cfg-filename
-                    if( isJavaVersion(8) && isAtLeastOracleJavaUpdateVersion(40) ){
+                    if( JavaDetectionTools.IS_JAVA_8 && JavaDetectionTools.isAtLeastOracleJavaUpdateVersion(40) ){
                         if( "linux.app".equals(b.getID()) ){
                             project.getLogger().info("Applying workaround for oracle-jdk-bug since 1.8.0u40");
                             if( !ext.isSkipNativeLauncherWorkaround124() ){
@@ -386,23 +386,6 @@ public class JfxNativeTask extends JfxTask {
         if( !foundBundler ){
             throw new GradleException("No bundler found for given name " + bundler + ". Please check your configuration.");
         }
-    }
-
-    private boolean isJavaVersion(int oracleJavaVersion) {
-        String javaVersion = System.getProperty("java.version");
-        return javaVersion.startsWith("1." + oracleJavaVersion);
-    }
-
-    private boolean isAtLeastOracleJavaUpdateVersion(int updateNumber) {
-        String javaVersion = System.getProperty("java.version");
-        String[] javaVersionSplitted = javaVersion.split("_");
-        if( javaVersionSplitted.length <= 1 ){
-            return false;
-        }
-        String javaUpdateVersionRaw = javaVersionSplitted[1];
-        // NumberFormatException on openjdk (the reported Java version is "1.8.0_45-internal")
-        String javaUpdateVersion = javaUpdateVersionRaw.replaceAll("[^\\d]", "");
-        return Integer.parseInt(javaUpdateVersion, 10) >= updateNumber;
     }
 
     private void addToMapWhenNotNull(Object value, String key, Map<String, Object> map) {
