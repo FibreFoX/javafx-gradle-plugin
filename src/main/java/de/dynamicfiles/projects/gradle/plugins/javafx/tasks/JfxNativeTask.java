@@ -36,7 +36,6 @@ import java.nio.file.FileVisitor;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -48,8 +47,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.gradle.api.GradleException;
@@ -293,7 +290,7 @@ public class JfxNativeTask extends JfxTask {
 
         // run bundlers
         Bundlers bundlers = Bundlers.createBundlersInstance(); // service discovery?
-        
+
         // don't allow to overwrite existing bundler IDs
         List<String> existingBundlerIds = bundlers.getBundlers().stream().map(existingBundler -> existingBundler.getID()).collect(Collectors.toList());
 
@@ -315,11 +312,36 @@ public class JfxNativeTask extends JfxTask {
                 bundlers.loadBundler(customBundler);
             });
         });
-        
+
+        final String cfgWorkaround205Marker = "cfgWorkaround205Marker";
+        final String cfgWorkaround205DoneMarker = cfgWorkaround205Marker + ".done";
         boolean foundBundler = false;
         for( Bundler b : bundlers.getBundlers() ){
+            boolean runBundler = true;
             if( bundler != null && !"ALL".equalsIgnoreCase(bundler) && !bundler.equalsIgnoreCase(b.getID()) ){
                 // this is not the specified bundler
+                runBundler = false;
+            }
+
+            // Workaround for native installer bundle not creating working executable native launcher
+            // (this is a comeback of issue 124)
+            // https://github.com/javafx-maven-plugin/javafx-maven-plugin/issues/205
+            // do run application bundler and put the cfg-file to application resources
+            if( System.getProperty("os.name").toLowerCase().startsWith("linux") ){
+                if( workarounds.isWorkaroundForBug205Needed() ){
+                    // check if special conditions for this are met (not jnlp, but not linux.app too, because there another workaround already works)
+                    if( !"jnlp".equalsIgnoreCase(bundler) && !"linux.app".equalsIgnoreCase(bundler) && "linux.app".equalsIgnoreCase(b.getID()) ){
+                        if( !ext.isSkipNativeLauncherWorkaround205() ){
+                            logger.info("Detected linux application bundler needs to run before installer bundlers are executed.");
+                            runBundler = true;
+                            params.put(cfgWorkaround205Marker, "true");
+                        } else {
+                            logger.info("Skipped workaround for native linux installer bundlers.");
+                        }
+                    }
+                }
+            }
+            if( !runBundler ){
                 continue;
             }
             foundBundler = true;
@@ -332,25 +354,18 @@ public class JfxNativeTask extends JfxTask {
                     // Workaround for "Native package for Ubuntu doesn't work"
                     // https://github.com/javafx-maven-plugin/javafx-maven-plugin/issues/124
                     // real bug: linux-launcher from oracle-jdk starting from 1.8.0u40 logic to determine .cfg-filename
-                    if( JavaDetectionTools.IS_JAVA_8 && JavaDetectionTools.isAtLeastOracleJavaUpdateVersion(40) ){
+                    if( workarounds.isWorkaroundForBug124Needed() ){
                         if( "linux.app".equals(b.getID()) ){
-                            logger.info("Applying workaround for oracle-jdk-bug since 1.8.0u40");
+                            logger.info("Applying workaround for oracle-jdk-bug since 1.8.0u40 regarding native linux launcher(s).");
                             if( !ext.isSkipNativeLauncherWorkaround124() ){
-                                // apply on main launcher
-                                applyNativeLauncherWorkaround(project, ext.getJfxAppOutputDir(), appName);
-
-                                // check on secondary launchers too
-                                if( ext.getSecondaryLaunchers() != null && !ext.getSecondaryLaunchers().isEmpty() ){
-                                    ext.getSecondaryLaunchers().stream().map(launcherMap -> getNativeLauncher(launcherMap)).map(launcher -> {
-                                        return launcher.getAppName();
-                                    }).filter(launcherAppName -> {
-                                        // check appName containing any dots (which is the bug)
-                                        return launcherAppName.contains(".");
-                                    }).forEach(launcherAppname -> {
-                                        applyNativeLauncherWorkaround(project, ext.getJfxAppOutputDir(), launcherAppname);
-                                    });
+                                List<NativeLauncher> nativeLaunchers = ext.getSecondaryLaunchers().stream().map(launcherMap -> getNativeLauncher(launcherMap)).collect(Collectors.toList());
+                                workarounds.applyWorkaround124(appName, nativeLaunchers);
+                                // only apply workaround for issue 205 when having workaround for issue 124 active
+                                if( Boolean.parseBoolean(String.valueOf(params.get(cfgWorkaround205Marker))) && !Boolean.parseBoolean((String) params.get(cfgWorkaround205DoneMarker)) ){
+                                    logger.info("Preparing workaround for oracle-jdk-bug since 1.8.0u40 regarding native linux launcher(s) inside native linux installers.");
+                                    workarounds.applyWorkaround205(appName, nativeLaunchers, params);
+                                    params.put(cfgWorkaround205DoneMarker, "true");
                                 }
-
                             } else {
                                 logger.info("Skipped workaround for native linux launcher(s).");
                             }
@@ -358,25 +373,24 @@ public class JfxNativeTask extends JfxTask {
                     }
 
                     if( "jnlp".equals(b.getID()) ){
-                        if( File.separator.equals("\\") ){
+                        if( workarounds.isWorkaroundForBug182Needed() ){
                             // Workaround for "JNLP-generation: path for dependency-lib on windows with backslash"
                             // https://github.com/javafx-maven-plugin/javafx-maven-plugin/issues/182
                             // jnlp-bundler uses RelativeFileSet, and generates system-dependent dividers (\ on windows, / on others)
                             logger.info("Applying workaround for oracle-jdk-bug since 1.8.0u60 regarding jar-path inside generated JNLP-files.");
                             if( !ext.isSkipJNLPRessourcePathWorkaround182() ){
-                                fixPathsInsideJNLPFiles(ext);
+                                workarounds.fixPathsInsideJNLPFiles();
                             } else {
                                 logger.info("Skipped workaround for jar-paths jar-path inside generated JNLP-files.");
                             }
                         }
 
                         // Do sign generated jar-files by calling the packager (this might change in the future,
-                        // hopefully when oracle reworked the process inside the JNLP-bundler.
+                        // hopefully when oracle reworked the process inside the JNLP-bundler)
                         // https://github.com/javafx-maven-plugin/javafx-maven-plugin/issues/185
-                        if( params.containsKey("jnlp.allPermisions") && Boolean.parseBoolean(String.valueOf(params.get("jnlp.allPermisions"))) ){
+                        if( workarounds.isWorkaroundForBug185Needed(params) ){
                             logger.info("Signing jar-files referenced inside generated JNLP-files.");
                             if( !ext.isSkipSigningJarFilesJNLP185() ){
-
                                 // JavaFX signing using BLOB method will get dropped on JDK 9: "blob signing is going away in JDK9. "
                                 // https://bugs.openjdk.java.net/browse/JDK-8088866?focusedCommentId=13889898#comment-13889898
                                 if( !ext.isNoBlobSigning() ){
@@ -386,13 +400,7 @@ public class JfxNativeTask extends JfxTask {
                                     logger.info("Signing jar-files using jarsigner.");
                                     signJarFiles(ext);
                                 }
-
-                                if( !ext.isSkipSizeRecalculationForJNLP185() ){
-                                    logger.info("Fixing sizes of JAR files within JNLP-files");
-                                    fixFileSizesWithinGeneratedJNLPFiles(ext);
-                                } else {
-                                    logger.info("Skipped fixing sizes of JAR files within JNLP-files");
-                                }
+                                workarounds.applyWorkaround185(ext.isSkipSizeRecalculationForJNLP185());
                             } else {
                                 logger.info("Skipped signing jar-files referenced inside JNLP-files.");
                             }
@@ -418,25 +426,6 @@ public class JfxNativeTask extends JfxTask {
             return;
         }
         map.put(key, value);
-    }
-
-    private void applyNativeLauncherWorkaround(Project project, String nativeOutputDirString, String appName) {
-        // check appName containing any dots
-        boolean needsWorkaround = appName.contains(".");
-        if( !needsWorkaround ){
-            return;
-        }
-        // rename .cfg-file (makes it able to create running applications again, even within installer)
-        String newConfigFileName = appName.substring(0, appName.lastIndexOf("."));
-        File nativeOutputDir = new File(project.getProjectDir(), nativeOutputDirString);
-        Path appPath = nativeOutputDir.toPath().toAbsolutePath().resolve(appName).resolve("app");
-        String configfileExtension = ".cfg";
-        Path oldConfigFile = appPath.resolve(appName + configfileExtension);
-        try{
-            Files.move(oldConfigFile, appPath.resolve(newConfigFileName + configfileExtension), StandardCopyOption.ATOMIC_MOVE);
-        } catch(IOException ex){
-            project.getLogger().warn("Couldn't rename configfile. Please see issue #124 of the javafx-maven-plugin for further details.", ex);
-        }
     }
 
     private List<File> getGeneratedJNLPFiles(JavaFXGradlePluginExtension ext) {
@@ -473,77 +462,6 @@ public class JfxNativeTask extends JfxTask {
             }
         });
         return jarFiles;
-    }
-
-    private Map<String, Long> getFileSizes(JavaFXGradlePluginExtension ext, List<String> files) {
-        final Map<String, Long> fileSizes = new HashMap<>();
-        Project project = this.getProject();
-        files.stream().forEach(relativeFilePath -> {
-            File file = new File(new File(project.getProjectDir(), ext.getNativeOutputDir()), relativeFilePath);
-            // add the size for each file
-            fileSizes.put(relativeFilePath, file.length());
-        });
-        return fileSizes;
-    }
-
-    private void fixPathsInsideJNLPFiles(JavaFXGradlePluginExtension ext) {
-        List<File> generatedJNLPFiles = getGeneratedJNLPFiles(ext);
-        Pattern pattern = Pattern.compile(JNLP_JAR_PATTERN);
-        generatedJNLPFiles.forEach(file -> {
-            try{
-                List<String> allLines = Files.readAllLines(file.toPath());
-                List<String> newLines = new ArrayList<>();
-                allLines.stream().forEach(line -> {
-                    if( line.matches(JNLP_JAR_PATTERN) ){
-                        // get jar-file
-                        Matcher matcher = pattern.matcher(line);
-                        matcher.find();
-                        String rawJarName = matcher.group(2);
-                        // replace \ with /
-                        newLines.add(line.replace(rawJarName, rawJarName.replaceAll("\\\\", "\\/")));
-                    } else {
-                        newLines.add(line);
-                    }
-                });
-                Files.write(file.toPath(), newLines, StandardOpenOption.TRUNCATE_EXISTING);
-            } catch(IOException ignored){
-                // NO-OP
-            }
-        });
-    }
-
-    private void fixFileSizesWithinGeneratedJNLPFiles(JavaFXGradlePluginExtension ext) {
-        // after signing, we have to adjust sizes, because they have changed (since they are modified with the signature)
-        List<String> jarFiles = getJARFilesFromJNLPFiles(ext);
-        Map<String, Long> newFileSizes = getFileSizes(ext, jarFiles);
-        List<File> generatedJNLPFiles = getGeneratedJNLPFiles(ext);
-        Pattern pattern = Pattern.compile(JNLP_JAR_PATTERN);
-        generatedJNLPFiles.forEach(file -> {
-            try{
-                List<String> allLines = Files.readAllLines(file.toPath());
-                List<String> newLines = new ArrayList<>();
-                allLines.stream().forEach(line -> {
-                    if( line.matches(JNLP_JAR_PATTERN) ){
-                        // get jar-file
-                        Matcher matcher = pattern.matcher(line);
-                        matcher.find();
-                        String rawJarName = matcher.group(2);
-                        String jarName = rawJarName.substring(1, rawJarName.length() - 1);
-                        if( newFileSizes.containsKey(jarName) ){
-                            // replace old size with new one
-                            newLines.add(line.replace(matcher.group(4), "\"" + newFileSizes.get(jarName) + "\""));
-                        } else {
-                            newLines.add(line);
-                        }
-                    } else {
-                        newLines.add(line);
-                    }
-                });
-                Files.write(file.toPath(), newLines, StandardOpenOption.TRUNCATE_EXISTING);
-            } catch(IOException ignored){
-                // NO-OP
-            }
-        });
     }
 
     @SuppressWarnings("unchecked")
