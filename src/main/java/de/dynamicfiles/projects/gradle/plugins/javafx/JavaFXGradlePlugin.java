@@ -113,7 +113,7 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
 
         // add ant-javafx.jar to the classloader (using a different way as javafx-maven-plugin ;D)
         try{
-            List<URL> antJarList = new ArrayList<URL>();
+            List<URL> antJarList = new ArrayList<>();
             antJarList.add(jfxAntJar.toURI().toURL());
             // I really don't know, why there isn't a direct way to add some File... or just one URL,
             // but: no need to check if jar already was added ;) it's done inside
