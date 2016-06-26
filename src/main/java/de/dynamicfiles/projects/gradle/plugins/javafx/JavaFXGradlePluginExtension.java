@@ -64,8 +64,8 @@ public class JavaFXGradlePluginExtension {
     private boolean skipSigningJarFilesJNLP185 = false;
     private boolean skipSizeRecalculationForJNLP185 = false;
     private boolean noBlobSigning = false;
-    private List<String> customBundlers;
-    private boolean skipNativeLauncherWorkaround205;
+    private List<String> customBundlers = null;
+    private boolean skipNativeLauncherWorkaround205 = false;
 
     // GenerateKeyStoreMojo
     private String keyStore = "src/main/deploy/keystore.jks";
