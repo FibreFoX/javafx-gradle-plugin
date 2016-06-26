@@ -64,6 +64,8 @@ public class JavaFXGradlePluginExtension {
     private boolean skipSigningJarFilesJNLP185 = false;
     private boolean skipSizeRecalculationForJNLP185 = false;
     private boolean noBlobSigning = false;
+    private List<String> customBundlers;
+    private boolean skipNativeLauncherWorkaround205;
 
     // GenerateKeyStoreMojo
     private String keyStore = "src/main/deploy/keystore.jks";
@@ -284,22 +286,6 @@ public class JavaFXGradlePluginExtension {
         this.additionalAppResources = additionalAppResources;
     }
 
-    public boolean isSkipNativeLauncherWorkaround124() {
-        return skipNativeLauncherWorkaround124;
-    }
-
-    public void setSkipNativeLauncherWorkaround124(boolean skipNativeLauncherWorkaround124) {
-        this.skipNativeLauncherWorkaround124 = skipNativeLauncherWorkaround124;
-    }
-
-    public boolean isSkipNativeLauncherWorkaround167() {
-        return skipNativeLauncherWorkaround167;
-    }
-
-    public void setSkipNativeLauncherWorkaround167(boolean skipNativeLauncherWorkaround167) {
-        this.skipNativeLauncherWorkaround167 = skipNativeLauncherWorkaround167;
-    }
-
     public List<Map<String, Object>> getSecondaryLaunchers() {
         return secondaryLaunchers;
     }
@@ -316,12 +302,68 @@ public class JavaFXGradlePluginExtension {
         this.fileAssociations = fileAssociations;
     }
 
+    public boolean isSkipNativeLauncherWorkaround124() {
+        return skipNativeLauncherWorkaround124;
+    }
+
+    public void setSkipNativeLauncherWorkaround124(boolean skipNativeLauncherWorkaround124) {
+        this.skipNativeLauncherWorkaround124 = skipNativeLauncherWorkaround124;
+    }
+
+    public boolean isSkipNativeLauncherWorkaround167() {
+        return skipNativeLauncherWorkaround167;
+    }
+
+    public void setSkipNativeLauncherWorkaround167(boolean skipNativeLauncherWorkaround167) {
+        this.skipNativeLauncherWorkaround167 = skipNativeLauncherWorkaround167;
+    }
+
     public boolean isSkipJNLPRessourcePathWorkaround182() {
         return skipJNLPRessourcePathWorkaround182;
     }
 
     public void setSkipJNLPRessourcePathWorkaround182(boolean skipJNLPRessourcePathWorkaround182) {
         this.skipJNLPRessourcePathWorkaround182 = skipJNLPRessourcePathWorkaround182;
+    }
+
+    public boolean isSkipSigningJarFilesJNLP185() {
+        return skipSigningJarFilesJNLP185;
+    }
+
+    public void setSkipSigningJarFilesJNLP185(boolean skipSigningJarFilesJNLP185) {
+        this.skipSigningJarFilesJNLP185 = skipSigningJarFilesJNLP185;
+    }
+
+    public boolean isSkipSizeRecalculationForJNLP185() {
+        return skipSizeRecalculationForJNLP185;
+    }
+
+    public void setSkipSizeRecalculationForJNLP185(boolean skipSizeRecalculationForJNLP185) {
+        this.skipSizeRecalculationForJNLP185 = skipSizeRecalculationForJNLP185;
+    }
+
+    public boolean isNoBlobSigning() {
+        return noBlobSigning;
+    }
+
+    public void setNoBlobSigning(boolean noBlobSigning) {
+        this.noBlobSigning = noBlobSigning;
+    }
+
+    public List<String> getCustomBundlers() {
+        return customBundlers;
+    }
+
+    public void setCustomBundlers(List<String> customBundlers) {
+        this.customBundlers = customBundlers;
+    }
+
+    public boolean isSkipNativeLauncherWorkaround205() {
+        return skipNativeLauncherWorkaround205;
+    }
+
+    public void setSkipNativeLauncherWorkaround205(boolean skipNativeLauncherWorkaround205) {
+        this.skipNativeLauncherWorkaround205 = skipNativeLauncherWorkaround205;
     }
 
     public String getKeyStore() {
@@ -362,30 +404,6 @@ public class JavaFXGradlePluginExtension {
 
     public void setKeyStoreType(String keyStoreType) {
         this.keyStoreType = keyStoreType;
-    }
-
-    public boolean isSkipSigningJarFilesJNLP185() {
-        return skipSigningJarFilesJNLP185;
-    }
-
-    public void setSkipSigningJarFilesJNLP185(boolean skipSigningJarFilesJNLP185) {
-        this.skipSigningJarFilesJNLP185 = skipSigningJarFilesJNLP185;
-    }
-
-    public boolean isSkipSizeRecalculationForJNLP185() {
-        return skipSizeRecalculationForJNLP185;
-    }
-
-    public void setSkipSizeRecalculationForJNLP185(boolean skipSizeRecalculationForJNLP185) {
-        this.skipSizeRecalculationForJNLP185 = skipSizeRecalculationForJNLP185;
-    }
-
-    public boolean isNoBlobSigning() {
-        return noBlobSigning;
-    }
-
-    public void setNoBlobSigning(boolean noBlobSigning) {
-        this.noBlobSigning = noBlobSigning;
     }
 
     public boolean isOverwriteKeyStore() {

@@ -293,6 +293,29 @@ public class JfxNativeTask extends JfxTask {
 
         // run bundlers
         Bundlers bundlers = Bundlers.createBundlersInstance(); // service discovery?
+        
+        // don't allow to overwrite existing bundler IDs
+        List<String> existingBundlerIds = bundlers.getBundlers().stream().map(existingBundler -> existingBundler.getID()).collect(Collectors.toList());
+
+        Optional.ofNullable(ext.getCustomBundlers()).ifPresent(customBundlerList -> {
+            customBundlerList.stream().map(customBundlerClassName -> {
+                try{
+                    Class<?> customBundlerClass = Class.forName(customBundlerClassName);
+                    Bundler newCustomBundler = (Bundler) customBundlerClass.newInstance();
+                    // if already existing (or already registered), skip this instance
+                    if( existingBundlerIds.contains(newCustomBundler.getID()) ){
+                        return null;
+                    }
+                    return newCustomBundler;
+                } catch(ClassNotFoundException | InstantiationException | IllegalAccessException | ClassCastException ex){
+                    logger.warn("There was an exception while creating a new instance of custom bundler: " + customBundlerClassName, ex);
+                }
+                return null;
+            }).filter(customBundler -> customBundler != null).forEach(customBundler -> {
+                bundlers.loadBundler(customBundler);
+            });
+        });
+        
         boolean foundBundler = false;
         for( Bundler b : bundlers.getBundlers() ){
             if( bundler != null && !"ALL".equalsIgnoreCase(bundler) && !bundler.equalsIgnoreCase(b.getID()) ){
