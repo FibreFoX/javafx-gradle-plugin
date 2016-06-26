@@ -27,6 +27,7 @@ import com.sun.javafx.tools.packager.SignJarParams;
 import de.dynamicfiles.projects.gradle.plugins.javafx.JavaFXGradlePluginExtension;
 import de.dynamicfiles.projects.gradle.plugins.javafx.converter.FileAssociation;
 import de.dynamicfiles.projects.gradle.plugins.javafx.converter.NativeLauncher;
+import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.internal.Workarounds;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
@@ -62,6 +63,8 @@ public class JfxNativeTask extends JfxTask {
 
     private static final String JNLP_JAR_PATTERN = "(.*)href=(\".*?\")(.*)size=(\".*?\")(.*)";
 
+    private Workarounds workarounds = null;
+
     @TaskAction
     public void jfxnative() {
         Project project = this.getProject();
@@ -70,6 +73,8 @@ public class JfxNativeTask extends JfxTask {
         addDeployDirToSystemClassloader(project, ext.getDeployDir());
 
         String bundler = ext.getBundler();
+
+        workarounds = new Workarounds(new File(project.getProjectDir(), ext.getNativeOutputDir()), project.getLogger());
 
         Map<String, ? super Object> params = new HashMap<>();
 
@@ -251,21 +256,14 @@ public class JfxNativeTask extends JfxTask {
         });
 
         // bugfix for "bundler not being able to produce native bundle without JRE on windows"
+        // https://github.com/javafx-maven-plugin/javafx-maven-plugin/issues/167
         // this has been fixed and made available since 1.8.0u92:
         // http://www.oracle.com/technetwork/java/javase/2col/8u92-bugfixes-2949473.html
-        if( isJavaVersion(8) && isAtLeastOracleJavaUpdateVersion(60) && !isAtLeastOracleJavaUpdateVersion(92) ){
+        if( workarounds.isWorkaroundForBug167Needed() ){
             if( !ext.isSkipNativeLauncherWorkaround167() ){
-                if( params.containsKey("runtime") ){
-                    project.getLogger().info("Applying workaround for oracle-jdk-bug since 1.8.0u60");
-                    // the problem is com.oracle.tools.packager.windows.WinAppBundler within createLauncherForEntryPoint-Method
-                    // it does NOT respect runtime-setting while calling "writeCfgFile"-method of com.oracle.tools.packager.AbstractImageBundler
-                    // since newer java versions (they added possability to have INI-file-format of generated cfg-file, since 1.8.0_60).
-                    // Because we want to have backward-compatibility within java 8, we will use parameter-name as hardcoded string!
-                    // Our workaround: use prop-file-format
-                    params.put("launcher-cfg-format", "prop");
-                }
+                workarounds.applyWorkaround167(params);
             } else {
-                project.getLogger().info("Skipped workaround for native launcher regarding cfg-file-format.");
+                getLogger().info("Skipped workaround for native launcher regarding cfg-file-format.");
             }
         }
 
