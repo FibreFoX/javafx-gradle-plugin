@@ -54,6 +54,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
+import org.gradle.api.logging.Logger;
 import org.gradle.api.tasks.TaskAction;
 
 /**
@@ -74,12 +75,13 @@ public class JfxNativeTask extends JfxTask {
         addDeployDirToSystemClassloader(project, ext.getDeployDir());
 
         String bundler = ext.getBundler();
+        final Logger logger = project.getLogger();
 
-        workarounds = new Workarounds(new File(project.getProjectDir(), ext.getNativeOutputDir()), project.getLogger());
+        workarounds = new Workarounds(new File(project.getProjectDir(), ext.getNativeOutputDir()), logger);
 
         Map<String, ? super Object> params = new HashMap<>();
 
-        project.getLogger().info("Creating parameter-map for bundler '" + bundler + "'");
+        logger.info("Creating parameter-map for bundler '" + bundler + "'");
 
         params.put(StandardBundlerParam.VERBOSE.getID(), ext.isVerbose());
         Optional.ofNullable(ext.getIdentifier()).ifPresent(id -> {
@@ -121,7 +123,7 @@ public class JfxNativeTask extends JfxTask {
                 .map(appRessourcesString -> new File(project.getProjectDir(), appRessourcesString))
                 .filter(File::exists)
                 .ifPresent(appResources -> {
-                    project.getLogger().info("Copying additional app ressources...");
+                    logger.info("Copying additional app ressources...");
                     try{
                         Path targetFolder = new File(project.getProjectDir(), ext.getJfxAppOutputDir()).toPath();
                         Path sourceFolder = appResources.toPath();
@@ -144,7 +146,7 @@ public class JfxNativeTask extends JfxTask {
                             @Override
                             public FileVisitResult visitFileFailed(Path source, IOException ioe) throws IOException {
                                 // don't fail, just inform user
-                                project.getLogger().warn(String.format("Couldn't copy additional app resource %s with reason %s", source.toString(), ioe.getLocalizedMessage()));
+                                logger.warn(String.format("Couldn't copy additional app resource %s with reason %s", source.toString(), ioe.getLocalizedMessage()));
                                 return FileVisitResult.CONTINUE;
                             }
 
@@ -155,7 +157,7 @@ public class JfxNativeTask extends JfxTask {
                             }
                         });
                     } catch(IOException e){
-                        project.getLogger().warn("Couldn't copy additional application resource-file.", e);
+                        logger.warn("Couldn't copy additional application resource-file.", e);
                     }
                 });
 
@@ -167,11 +169,11 @@ public class JfxNativeTask extends JfxTask {
                     .filter(File::isFile)
                     .filter(File::canRead)
                     .forEach(f -> {
-                        project.getLogger().info(String.format("Add %s file to application resources.", f));
+                        logger.info(String.format("Add %s file to application resources.", f));
                         resourceFiles.add(f);
                     });
         } catch(IOException e){
-            project.getLogger().warn("There was a problem while processing application files.", e);
+            logger.warn("There was a problem while processing application files.", e);
         }
         params.put(StandardBundlerParam.APP_RESOURCES.getID(), new RelativeFileSet(new File(project.getProjectDir(), ext.getJfxAppOutputDir()), resourceFiles));
 
@@ -192,14 +194,14 @@ public class JfxNativeTask extends JfxTask {
         final AtomicBoolean nullLauncherNameFound = new AtomicBoolean(false);
         // check "no launcher names" and gather all names
         Optional.ofNullable(ext.getSecondaryLaunchers()).filter(list -> !list.isEmpty()).ifPresent(launchersMap -> {
-            project.getLogger().info("Adding configuration for secondary native launcher");
+            logger.info("Adding configuration for secondary native launcher");
             nullLauncherNameFound.set(launchersMap.stream().map(launcherMap -> getNativeLauncher(launcherMap)).anyMatch(launcher -> launcher.getAppName() == null));
             if( !nullLauncherNameFound.get() ){
                 launcherNames.addAll(launchersMap.stream().map(launcherMap -> getNativeLauncher(launcherMap)).map(launcher -> launcher.getAppName()).collect(Collectors.toList()));
 
                 // assume we have valid entry here
                 params.put(StandardBundlerParam.SECONDARY_LAUNCHERS.getID(), launchersMap.stream().map(launcherMap -> getNativeLauncher(launcherMap)).map(launcher -> {
-                    project.getLogger().info("Adding secondary launcher: " + launcher.getAppName());
+                    logger.info("Adding secondary launcher: " + launcher.getAppName());
                     Map<String, Object> secondaryLauncher = new HashMap<>();
                     addToMapWhenNotNull(launcher.getAppName(), StandardBundlerParam.APP_NAME.getID(), secondaryLauncher);
                     addToMapWhenNotNull(launcher.getMainClass(), StandardBundlerParam.MAIN_CLASS.getID(), secondaryLauncher);
@@ -280,13 +282,13 @@ public class JfxNativeTask extends JfxTask {
         // http://hg.openjdk.java.net/openjfx/9-dev/rt/file/7cae930f7a19/modules/fxpackager/src/main/java/com/oracle/tools/packager/windows/WinAppBundler.java#l374
         if( isGradleDaemonMode() && !ext.isSkipDaemonModeCheck() && (JavaDetectionTools.IS_JAVA_9 || (JavaDetectionTools.IS_JAVA_8 && JavaDetectionTools.isAtLeastOracleJavaUpdateVersion(60))) ){
             if( !params.containsKey("runtime") || params.get("runtime") != null ){
-                project.getLogger().lifecycle("Gradle is in daemon-mode, skipped executing bundler, because this would result in some error on clean-task. (JDK-8148717)");
-                project.getLogger().warn("Aborted jfxNative-task");
+                logger.lifecycle("Gradle is in daemon-mode, skipped executing bundler, because this would result in some error on clean-task. (JDK-8148717)");
+                logger.warn("Aborted jfxNative-task");
                 return;
             }
         }
         if( ext.isSkipDaemonModeCheck() ){
-            project.getLogger().warn("Check for gradle daemon-mode was skipped, you might have some problems while bundling.");
+            logger.warn("Check for gradle daemon-mode was skipped, you might have some problems while bundling.");
         }
 
         // run bundlers
@@ -309,7 +311,7 @@ public class JfxNativeTask extends JfxTask {
                     // real bug: linux-launcher from oracle-jdk starting from 1.8.0u40 logic to determine .cfg-filename
                     if( JavaDetectionTools.IS_JAVA_8 && JavaDetectionTools.isAtLeastOracleJavaUpdateVersion(40) ){
                         if( "linux.app".equals(b.getID()) ){
-                            project.getLogger().info("Applying workaround for oracle-jdk-bug since 1.8.0u40");
+                            logger.info("Applying workaround for oracle-jdk-bug since 1.8.0u40");
                             if( !ext.isSkipNativeLauncherWorkaround124() ){
                                 // apply on main launcher
                                 applyNativeLauncherWorkaround(project, ext.getJfxAppOutputDir(), appName);
@@ -327,7 +329,7 @@ public class JfxNativeTask extends JfxTask {
                                 }
 
                             } else {
-                                project.getLogger().info("Skipped workaround for native linux launcher(s).");
+                                logger.info("Skipped workaround for native linux launcher(s).");
                             }
                         }
                     }
@@ -337,11 +339,11 @@ public class JfxNativeTask extends JfxTask {
                             // Workaround for "JNLP-generation: path for dependency-lib on windows with backslash"
                             // https://github.com/javafx-maven-plugin/javafx-maven-plugin/issues/182
                             // jnlp-bundler uses RelativeFileSet, and generates system-dependent dividers (\ on windows, / on others)
-                            project.getLogger().info("Applying workaround for oracle-jdk-bug since 1.8.0u60 regarding jar-path inside generated JNLP-files.");
+                            logger.info("Applying workaround for oracle-jdk-bug since 1.8.0u60 regarding jar-path inside generated JNLP-files.");
                             if( !ext.isSkipJNLPRessourcePathWorkaround182() ){
                                 fixPathsInsideJNLPFiles(ext);
                             } else {
-                                project.getLogger().info("Skipped workaround for jar-paths jar-path inside generated JNLP-files.");
+                                logger.info("Skipped workaround for jar-paths jar-path inside generated JNLP-files.");
                             }
                         }
 
@@ -349,27 +351,27 @@ public class JfxNativeTask extends JfxTask {
                         // hopefully when oracle reworked the process inside the JNLP-bundler.
                         // https://github.com/javafx-maven-plugin/javafx-maven-plugin/issues/185
                         if( params.containsKey("jnlp.allPermisions") && Boolean.parseBoolean(String.valueOf(params.get("jnlp.allPermisions"))) ){
-                            project.getLogger().info("Signing jar-files referenced inside generated JNLP-files.");
+                            logger.info("Signing jar-files referenced inside generated JNLP-files.");
                             if( !ext.isSkipSigningJarFilesJNLP185() ){
 
                                 // JavaFX signing using BLOB method will get dropped on JDK 9: "blob signing is going away in JDK9. "
                                 // https://bugs.openjdk.java.net/browse/JDK-8088866?focusedCommentId=13889898#comment-13889898
                                 if( !ext.isNoBlobSigning() ){
-                                    project.getLogger().info("Signing jar-files using BLOB method.");
+                                    logger.info("Signing jar-files using BLOB method.");
                                     signJarFilesUsingBlobSigning(ext);
                                 } else {
-                                    project.getLogger().info("Signing jar-files using jarsigner.");
+                                    logger.info("Signing jar-files using jarsigner.");
                                     signJarFiles(ext);
                                 }
 
                                 if( !ext.isSkipSizeRecalculationForJNLP185() ){
-                                    project.getLogger().info("Fixing sizes of JAR files within JNLP-files");
+                                    logger.info("Fixing sizes of JAR files within JNLP-files");
                                     fixFileSizesWithinGeneratedJNLPFiles(ext);
                                 } else {
-                                    project.getLogger().info("Skipped fixing sizes of JAR files within JNLP-files");
+                                    logger.info("Skipped fixing sizes of JAR files within JNLP-files");
                                 }
                             } else {
-                                project.getLogger().info("Skipped signing jar-files referenced inside JNLP-files.");
+                                logger.info("Skipped signing jar-files referenced inside JNLP-files.");
                             }
                         }
                     }
@@ -378,7 +380,7 @@ public class JfxNativeTask extends JfxTask {
             } catch(UnsupportedPlatformException e){
                 // quietly ignored
             } catch(ConfigException e){
-                project.getLogger().info("Skipping '" + b.getName() + "' because of configuration error '" + e.getMessage() + "'\nAdvice to fix: " + e.getAdvice());
+                logger.info("Skipping '" + b.getName() + "' because of configuration error '" + e.getMessage() + "'\nAdvice to fix: " + e.getAdvice());
             } catch(GradleException ex){
                 throw new GradleException("Got exception while executing bundler.", ex);
             }
