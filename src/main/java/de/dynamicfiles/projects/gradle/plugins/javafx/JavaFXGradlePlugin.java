@@ -97,6 +97,7 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
             throw new GradleException("Couldn't find Ant-JavaFX-library, please make sure you've installed some JDK which includes JavaFX (e.g. OracleJDK or OpenJDK and OpenJFX), and JAVA_HOME is set properly.");
         }
 
+        // don't use SystemClassloader or current Thread-ClassLoader, as we are not maven here ;)
         ClassLoader buildscriptClassloader = project.getBuildscript().getClassLoader();
 
         URLClassLoader sysloader;
