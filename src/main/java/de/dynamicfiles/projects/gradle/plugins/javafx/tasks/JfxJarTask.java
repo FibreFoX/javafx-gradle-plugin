@@ -28,10 +28,10 @@ import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
@@ -105,7 +105,7 @@ public class JfxJarTask extends JfxTask {
             createJarParams.addResource(someTempDir.toFile(), "");
         }
 
-        List<String> foundLibs = new ArrayList<>();
+        Set<String> foundLibs = new HashSet<>();
 
         // copy dependencies
         // got inspiration from: http://opensourceforgeeks.blogspot.de/2015/05/knowing-gradle-dependency-jars-download.html
@@ -163,9 +163,9 @@ public class JfxJarTask extends JfxTask {
         }
     }
 
-    private void copyModuleDependencies(Configuration configuration, String toPrint, Project project, final File libDir, List<String> foundLibs) {
+    private void copyModuleDependencies(Configuration configuration, String toPrint, Project project, final File libDir, Set<String> foundLibs) {
         project.getLogger().info("Copying defined " + toPrint + "-dependencies...");
-        // this woll work for all non-file dependencies
+        // this will work for all non-file dependencies
         configuration.getResolvedConfiguration().getFirstLevelModuleDependencies().forEach(resolvedDep -> {
             // TODO add dependency-filter
             resolvedDep.getAllModuleArtifacts().forEach(artifact -> {
@@ -182,7 +182,7 @@ public class JfxJarTask extends JfxTask {
         });
     }
 
-    private void copyFileDependencies(Configuration configuration, String toPrint, Project project, boolean isPackagerJarToBeAdded, final File libDir, List<String> foundLibs) {
+    private void copyFileDependencies(Configuration configuration, String toPrint, Project project, boolean isPackagerJarToBeAdded, final File libDir, Set<String> foundLibs) {
         project.getLogger().info("Copying defined " + toPrint + "-dependency-files...");
         // inside "getFiles" all non-maven dependencies (like packager.jar) will be available
         configuration.getResolvedConfiguration().getFiles(Specs.SATISFIES_ALL).forEach(someFile -> {
