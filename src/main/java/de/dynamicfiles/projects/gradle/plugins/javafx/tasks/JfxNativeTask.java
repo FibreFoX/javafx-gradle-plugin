@@ -87,7 +87,7 @@ public class JfxNativeTask extends JfxTask {
 
         // on gradle we don't have nice appnames .... i think?!
         String appName = ext.getAppName();
-        if( ext.getAppName() == null ){
+        if( appName == null ){
             org.gradle.api.tasks.bundling.Jar jarTask = (org.gradle.api.tasks.bundling.Jar) project.getTasks().findByName("jar");
             String archiveName = jarTask.getArchiveName();
             appName = archiveName.substring(0, archiveName.lastIndexOf("."));
