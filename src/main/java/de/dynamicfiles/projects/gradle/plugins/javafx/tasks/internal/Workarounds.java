@@ -242,13 +242,8 @@ public class Workarounds {
         }
     }
 
-    /**
+    /*
      * Get generated, fixed cfg-files and push them to app-resources-list.
-     *
-     *
-     * @param appName
-     * @param secondaryLaunchers
-     * @param params
      */
     public void applyWorkaround205(String appName, List<NativeLauncher> secondaryLaunchers, Map<String, Object> params) {
         // to workaround, we are gathering the fixed versions of the previous executed "app-bundler"
