@@ -2,12 +2,24 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/19tkbde1wrw8mc8h/branch/master?svg=true)](https://ci.appveyor.com/project/FibreFoX/javafx-gradle-plugin/branch/master)
 [![Maven Central](https://img.shields.io/maven-central/v/de.dynamicfiles.projects.gradle.plugins/javafx-gradle-plugin.svg)](https://maven-badges.herokuapp.com/maven-central/de.dynamicfiles.projects.gradle.plugins/javafx-gradle-plugin)
 
+
 JavaFX-Gradle-Plugin
 ====================
 
+Using javafx-gradle-plugin enhances your build-script with `javapackager`-power. No more using Apache Ant-calls, because this gradle-plugin wraps all calls and introduces workarounds and fixes for not-yet-fixed JDK-bugs. This gradle-plugin is a convenient-wrapper for the javapackger, so you have to [visit the official documentation](https://docs.oracle.com/javase/8/docs/technotes/guides/deploy/self-contained-packaging.html#A1324980) to know about the requirements on each operating-system.
+
+**Using OpenJDK?** Please make sure you have **OpenJFX** installed too, as the required JavaFX-parts are separated.
+
+
+**Using Maven?** Not problem, just [switch to the github-project of the javafx-maven-plugin](https://github.com/javafx-maven-plugin/javafx-maven-plugin).
+
+
+
+Why does this gradle-plugin exist?
+==================================
+
 In the need of some equivalent of the [javafx-maven-plugin](https://github.com/javafx-maven-plugin/javafx-maven-plugin) just for gradle, this project was born. A lot of you might have used the [`javafx-gradle`-plugin from Danno Ferrin](https://bitbucket.org/shemnon/javafx-gradle/), but he decided [to not continue](https://bitbucket.org/shemnon/javafx-gradle/issues/47/adding-manifest-attribute-javafx#comment-24360784) that project.
 
-Using javafx-gradle-plugin enhances your build-script with `javapackager`-power. No more using Apache Ant-calls, because this gradle-plugin wraps all calls and introduces workarounds and fixes for not-yet-fixed JDK-bugs.
 
 
 Example `build.gradle`
@@ -18,7 +30,7 @@ Please adjust your parameters accordingly:
 ```groovy
 buildscript {
     dependencies {
-        classpath group: 'de.dynamicfiles.projects.gradle.plugins', name: 'javafx-gradle-plugin', version: '8.4.1'
+        classpath group: 'de.dynamicfiles.projects.gradle.plugins', name: 'javafx-gradle-plugin', version: '8.5.1'
     }
     
     repositories {
@@ -111,32 +123,17 @@ Gradle Tasks
 * `gradle jfxGenerateKeyStore` - Create a Java keystore
 
 
+
 Last Release Notes
 ==================
 
-**Version 8.4.1 (15-Mar-2016)**
-
-Bugfixes:
-* copy dependencies with runtime-scope (fixes #15)
-
-Starting with this 8.4.x-release I will keep the [javafx-gradle-plugin](https://github.com/FibreFoX/javafx-gradle-plugin) and the [javafx-maven-plugin](https://github.com/javafx-maven-plugin/javafx-maven-plugin) in sync. This means, that you can compare the features of each plugin by comparing its major- and minor-version-number, I'm using [semantic versioning v2](http://semver.org/spec/v2.0.0.html).
-
-Next thing will be to create some tests and example-projects.
-
-
-(Not yet) Release(d) Notes
-==========================
-
-upcoming Version 8.5.1 (???-June-2016)
-
-**Note:**
-There won't be any [GString](http://docs.groovy-lang.org/latest/html/api/groovy/lang/GString.html)-support, please use `toString()` inside your buildscript
+**Version 8.5.1 (29-June-2016)**
 
 New:
-* added new property to skip workaround for gradle daemon mode (which causes problems with the runtime-folder, see issue #12 for more information)
+* added new property to skip workaround for gradle daemon mode (which causes problems with the runtime-folder, see issue #12 for more information), this makes it now possible to create native builds within the IDE (at least once)
 
 Bugfixes:
-* fixed some classloader-problem when using javafx-gradle-plugin in combination with Netbeans IDE having netbeans-gradle-plugin installed
+* fixed some classloader-problem when using javafx-gradle-plugin in combination with Netbeans IDE having netbeans-gradle-plugin installed *(I'm very sorry about this, don't know why this wasn't detected by me before)*
 * updated workaround-detection for creating native bundles without JRE, because [it got fixed by latest Oracle JDK 1.8.0u92](http://www.oracle.com/technetwork/java/javase/2col/8u92-bugfixes-2949473.html)
 
 Enhancements:
@@ -144,8 +141,21 @@ Enhancements:
 * changed the way for adding `ant-javafx.jar` to the classloaders (by using more stuff provided by the gradle-api)
 
 Migrated from javafx-maven-plugin:
-* (bugfix) updated workaround-detection for creating native bundles without JRE, because [it got fixed by latest Oracle JDK 1.8.0u92](http://www.oracle.com/technetwork/java/javase/2col/8u92-bugfixes-2949473.html)
 * (bugfix) added workaround for native linux launcher inside native linux installer bundle (DEB and RPM) not working, see issue [#205](https://github.com/javafx-maven-plugin/javafx-maven-plugin/issues/205) for more details on this (it's a come-back of the [issue 124](https://github.com/javafx-maven-plugin/javafx-maven-plugin/issues/124))
 * (new) added ability to write and use custom bundlers! This makes it possible to customize the work which is required for your bundling-process.
 * (new) added new property to disable "native linux launcher inside native linux installer"-fix `skipNativeLauncherWorkaround205 = true`
 * (improvement) moved workarounds and workaround-detection into its own class (makes it a bit easier to concentrate on the main work inside JfxNativeTask)
+
+**Note:**
+There won't be any [GString](http://docs.groovy-lang.org/latest/html/api/groovy/lang/GString.html)-support, please use `toString()` inside your buildscript
+
+Another note: I know, dependency-filtering is not yet implemented, but as this is a rather unused feature, I will take the time ;)
+
+
+
+(Not yet) Release(d) Notes
+==========================
+
+upcoming Version 8.5.2 (???-2016)
+
+* nothing changed yet
