@@ -20,6 +20,7 @@ import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.JfxNativeTask;
 import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.JfxJarTask;
 import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.JfxRunTask;
 import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.internal.JavaDetectionTools;
+import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.internal.MonkeyPatcher;
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -36,7 +37,7 @@ import org.gradle.api.Project;
  */
 public class JavaFXGradlePlugin implements Plugin<Project> {
 
-    private static final String ANT_JAVAFX_JAR_FILENAME = "ant-javafx.jar";
+    public static final String ANT_JAVAFX_JAR_FILENAME = "ant-javafx.jar";
 
     @Override
     public void apply(Project project) {
@@ -115,13 +116,25 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
         // add ant-javafx.jar to the classloader (using a different way as javafx-maven-plugin ;D)
         try{
             List<URL> antJarList = new ArrayList<>();
-            antJarList.add(jfxAntJar.toURI().toURL());
-            // I really don't know, why there isn't a direct way to add some File... or just one URL,
-            // but: no need to check if jar already was added ;) it's done inside
-            org.gradle.internal.classloader.ClasspathUtil.addUrl(sysloader, antJarList);
+            // I'm very sorry for this ugly condition :(
+            if( System.getProperty("os.name").toLowerCase().startsWith("windows") && isGradleDaemonMode() && (JavaDetectionTools.IS_JAVA_9 || (JavaDetectionTools.IS_JAVA_8 && JavaDetectionTools.isAtLeastOracleJavaUpdateVersion(60))) ){
+                antJarList.add(new MonkeyPatcher().getPatchedJfxAntJar());
+                // TODO check if already added!
+                org.gradle.internal.classloader.ClasspathUtil.addUrl(sysloader, antJarList);
+            } else {
+                antJarList.add(jfxAntJar.toURI().toURL());
+                // I really don't know, why there isn't a direct way to add some File... or just one URL,
+                // but: no need to check if jar already was added ;) it's done inside
+                org.gradle.internal.classloader.ClasspathUtil.addUrl(sysloader, antJarList);
+            }
         } catch(MalformedURLException ex){
             throw new GradleException("Could not add Ant-JavaFX-JAR to plugin-classloader", ex);
         }
+    }
+
+    protected boolean isGradleDaemonMode() {
+        String javaCommand = System.getProperty("sun.java.command");
+        return javaCommand != null && javaCommand.startsWith("org.gradle.launcher.daemon");
     }
 
 }
