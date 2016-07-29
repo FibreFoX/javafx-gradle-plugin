@@ -358,7 +358,13 @@ public class JfxNativeTask extends JfxTask {
                         if( "linux.app".equals(b.getID()) ){
                             logger.info("Applying workaround for oracle-jdk-bug since 1.8.0u40 regarding native linux launcher(s).");
                             if( !ext.isSkipNativeLauncherWorkaround124() ){
-                                List<NativeLauncher> nativeLaunchers = ext.getSecondaryLaunchers().stream().map(launcherMap -> getNativeLauncher(launcherMap)).collect(Collectors.toList());
+                                List<NativeLauncher> nativeLaunchers = new ArrayList<>();
+
+                                // bugfix for #24 "NullPointerException on linux without secondary launchers"
+                                Optional.ofNullable(ext.getSecondaryLaunchers()).ifPresent(launchers -> {
+                                    nativeLaunchers.addAll(launchers.stream().map(launcherMap -> getNativeLauncher(launcherMap)).collect(Collectors.toList()));
+                                });
+
                                 workarounds.applyWorkaround124(appName, nativeLaunchers);
                                 // only apply workaround for issue 205 when having workaround for issue 124 active
                                 if( Boolean.parseBoolean(String.valueOf(params.get(cfgWorkaround205Marker))) && !Boolean.parseBoolean((String) params.get(cfgWorkaround205DoneMarker)) ){
