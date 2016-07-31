@@ -33,7 +33,7 @@ dependencies {
 
 group = 'de.dynamicfiles.projects.gradle.plugins'
 archivesBaseName = 'javafx-gradle-plugin'
-version = '8.5.2-SNAPSHOT'
+version = '8.5.2'
 
 ext.isReleaseVersion = !version.endsWith("SNAPSHOT")
 

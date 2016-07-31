@@ -1,6 +1,18 @@
 Release Notes
 =============
 
+# Version 8.5.2 (31-July-2016)
+
+Bugfixes:
+* fixed issue #24 regarding NullPointerException inside workaround (I'm very sorry about that, thanks to @AustinShalit for finding this)
+
+**Note:**
+There won't be any [GString](http://docs.groovy-lang.org/latest/html/api/groovy/lang/GString.html)-support, please use `toString()` inside your buildscript
+
+Another note: I know, dependency-filtering is not yet implemented, but as this is a rather unused feature, I will take the time ;)
+
+
+
 # Version 8.5.1 (29-June-2016)
 
 New:
