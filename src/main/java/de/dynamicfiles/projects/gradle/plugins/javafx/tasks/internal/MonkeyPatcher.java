@@ -22,10 +22,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.jar.JarEntry;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.jar.JarFile;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -63,16 +62,21 @@ public class MonkeyPatcher {
         // when found special WinAppBundler-file, process this file via ASM
         // generate new class-file
         // write that generated class-file instead of original file to new jar-file
-        // return path to that file
+        // return path to that modified jar-file
         try{
             Path tempDirectory = Files.createTempDirectory("javafx-gradle-plugin-workaround");
             // delete that crap after JVM being shut down
             tempDirectory.toFile().deleteOnExit();
 
             JarFile jarFile = new JarFile(jfxAntJar, false, JarFile.OPEN_READ);
+            File targetManipulatedJarFile = tempDirectory.resolve(JavaFXGradlePlugin.ANT_JAVAFX_JAR_FILENAME).toAbsolutePath().toFile();
+            // delete that crap after JVM being shut down
+            targetManipulatedJarFile.deleteOnExit();
 
-            try(FileOutputStream processedAntJar = new FileOutputStream(tempDirectory.resolve(JavaFXGradlePlugin.ANT_JAVAFX_JAR_FILENAME).toAbsolutePath().toFile())){
-                ZipOutputStream zipOutputStream = new java.util.zip.ZipOutputStream(processedAntJar, StandardCharsets.UTF_8);
+            AtomicBoolean useModifiedVersion = new AtomicBoolean(false);
+
+            try(FileOutputStream processedAntJar = new FileOutputStream(targetManipulatedJarFile)){
+                ZipOutputStream zipOutputStream = new java.util.zip.ZipOutputStream(processedAntJar);
                 jarFile.stream().forEachOrdered(jarEntry -> {
                     System.out.println("copying entry > " + jarEntry.getName());
                     ZipEntry zipEntry = new ZipEntry(jarEntry.getName());
@@ -80,26 +84,28 @@ public class MonkeyPatcher {
                         zipOutputStream.putNextEntry(zipEntry);
 
                         if( jarEntry.getName().equals(FAULTY_CLASSFILE_TO_MONKEY_PATCH) ){
-                            System.out.println("WE FOUND OUR BUGGY THING");
-                            // TODO patch jar-file
+                            System.out.println("WE FOUND OUR BUGGY CLASS");
+                            useModifiedVersion.set(true);
 
-                            if( true == false ){
-                                ClassReader classReader = new ClassReader(jarFile.getInputStream(jarEntry));
+                            ClassReader classReader = new ClassReader(jarFile.getInputStream(jarEntry));
+                            ClassWriter cw = new ClassWriter(classReader, ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
 
-                                classReader.accept(new ClassVisitor(Opcodes.ASM5) {
-                                    @Override
-                                    public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
-                                        if( !(name.equals(METHOD_TO_MONKEY_PATCH) && desc.equals(METHOD_SIGNATURE_TO_MONKEY_PATCH)) ){
-                                            return super.visitMethod(access, name, desc, signature, exceptions);
-                                        }
-
-                                        System.out.println("WE FOUND OUR BUGGY THING");
-
-                                        return monkeyPatch_WinAppBundler();
+                            classReader.accept(new ClassVisitor(Opcodes.ASM5) {
+                                @Override
+                                public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
+                                    if( !(name.equals(METHOD_TO_MONKEY_PATCH) && desc.equals(METHOD_SIGNATURE_TO_MONKEY_PATCH)) ){
+                                        return super.visitMethod(access, name, desc, signature, exceptions);
                                     }
 
-                                }, 0);
-                            }
+                                    System.out.println("WE FOUND OUR BUGGY METHOD");
+
+                                    return monkeyPatch_WinAppBundler_Java8(cw);
+                                }
+
+                            }, 0);
+
+                            byte[] generatedBytes = cw.toByteArray();
+                            zipOutputStream.write(generatedBytes);
                         } else {
                             InputStream storedInputStream = jarFile.getInputStream(jarEntry);
                             int count;
@@ -115,21 +121,24 @@ public class MonkeyPatcher {
                 });
                 zipOutputStream.finish();
             }
+            if( useModifiedVersion.get() ){
+                return targetManipulatedJarFile.toURI().toURL();
+            }
         } catch(IOException ex){
             // NO-OP
         }
-
         return jfxAntJar.toURI().toURL();
     }
 
-    private MethodVisitor monkeyPatch_WinAppBundler() {
+    /*
+     * This mostly got generated from ASM itself
+     */
+    private MethodVisitor monkeyPatch_WinAppBundler_Java8(ClassWriter cw) {
         String javalangThrowable = "java/lang/Throwable";
         String javaioFile = "java/io/File";
         String javalangString = "java/lang/String";
-        // luckily ASM lies inside Gradle ;)
-        ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS);
 
-        MethodVisitor mv = cw.visitMethod(org.objectweb.asm.Opcodes.ACC_PRIVATE, METHOD_TO_MONKEY_PATCH, METHOD_SIGNATURE_TO_MONKEY_PATCH, null, new String[]{"java/io/IOException"});
+        MethodVisitor mv = cw.visitMethod(Opcodes.ACC_PRIVATE, METHOD_TO_MONKEY_PATCH, METHOD_SIGNATURE_TO_MONKEY_PATCH, null, new String[]{"java/io/IOException"});
 
         mv.visitCode();
         Label l0 = new Label();
@@ -148,168 +157,168 @@ public class MonkeyPatcher {
         mv.visitTryCatchBlock(l7, l8, l9, javalangThrowable);
         Label l10 = new Label();
         mv.visitTryCatchBlock(l5, l10, l6, null);
-        mv.visitInsn(org.objectweb.asm.Opcodes.ACONST_NULL);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ASTORE, 3);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, 2);
+        mv.visitInsn(Opcodes.ACONST_NULL);
+        mv.visitVarInsn(Opcodes.ASTORE, 3);
+        mv.visitVarInsn(Opcodes.ALOAD, 2);
         Label l11 = new Label();
-        mv.visitJumpInsn(org.objectweb.asm.Opcodes.IFNULL, l11);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, 2);
-        mv.visitMethodInsn(org.objectweb.asm.Opcodes.INVOKEVIRTUAL, javaioFile, "isDirectory", "()Z", false);
+        mv.visitJumpInsn(Opcodes.IFNULL, l11);
+        mv.visitVarInsn(Opcodes.ALOAD, 2);
+        mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, javaioFile, "isDirectory", "()Z", false);
         Label l12 = new Label();
-        mv.visitJumpInsn(org.objectweb.asm.Opcodes.IFNE, l12);
+        mv.visitJumpInsn(Opcodes.IFNE, l12);
         mv.visitLabel(l11);
         mv.visitFrame(Opcodes.F_APPEND, 1, new Object[]{javalangString}, 0, null);
-        mv.visitTypeInsn(org.objectweb.asm.Opcodes.NEW, javaioFile);
-        mv.visitInsn(org.objectweb.asm.Opcodes.DUP);
+        mv.visitTypeInsn(Opcodes.NEW, javaioFile);
+        mv.visitInsn(Opcodes.DUP);
         mv.visitLdcInsn("java.home");
-        mv.visitMethodInsn(org.objectweb.asm.Opcodes.INVOKESTATIC, "java/lang/System", "getProperty", "(Ljava/lang/String;)Ljava/lang/String;", false);
-        mv.visitMethodInsn(org.objectweb.asm.Opcodes.INVOKESPECIAL, javaioFile, "<init>", "(Ljava/lang/String;)V", false);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ASTORE, 2);
+        mv.visitMethodInsn(Opcodes.INVOKESTATIC, "java/lang/System", "getProperty", "(Ljava/lang/String;)Ljava/lang/String;", false);
+        mv.visitMethodInsn(Opcodes.INVOKESPECIAL, javaioFile, "<init>", "(Ljava/lang/String;)V", false);
+        mv.visitVarInsn(Opcodes.ASTORE, 2);
         mv.visitLabel(l12);
         mv.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
-        mv.visitFieldInsn(org.objectweb.asm.Opcodes.GETSTATIC, "com/oracle/tools/packager/windows/WinAppBundler", "VS_VERS", "[Ljava/lang/String;");
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ASTORE, 4);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, 4);
-        mv.visitInsn(org.objectweb.asm.Opcodes.ARRAYLENGTH);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ISTORE, 5);
-        mv.visitInsn(org.objectweb.asm.Opcodes.ICONST_0);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ISTORE, 6);
+        mv.visitFieldInsn(Opcodes.GETSTATIC, "com/oracle/tools/packager/windows/WinAppBundler", "VS_VERS", "[Ljava/lang/String;");
+        mv.visitVarInsn(Opcodes.ASTORE, 4);
+        mv.visitVarInsn(Opcodes.ALOAD, 4);
+        mv.visitInsn(Opcodes.ARRAYLENGTH);
+        mv.visitVarInsn(Opcodes.ISTORE, 5);
+        mv.visitInsn(Opcodes.ICONST_0);
+        mv.visitVarInsn(Opcodes.ISTORE, 6);
         Label l13 = new Label();
         mv.visitLabel(l13);
         mv.visitFrame(Opcodes.F_APPEND, 3, new Object[]{"[Ljava/lang/String;", Opcodes.INTEGER, Opcodes.INTEGER}, 0, null);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ILOAD, 6);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ILOAD, 5);
+        mv.visitVarInsn(Opcodes.ILOAD, 6);
+        mv.visitVarInsn(Opcodes.ILOAD, 5);
         Label l14 = new Label();
-        mv.visitJumpInsn(org.objectweb.asm.Opcodes.IF_ICMPGE, l14);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, 4);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ILOAD, 6);
-        mv.visitInsn(org.objectweb.asm.Opcodes.AALOAD);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ASTORE, 7);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, 0);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, 1);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, 7);
-        mv.visitMethodInsn(org.objectweb.asm.Opcodes.INVOKESPECIAL, "com/oracle/tools/packager/windows/WinAppBundler", "copyMSVCDLLs", "(Ljava/io/File;Ljava/lang/String;)Z", false);
+        mv.visitJumpInsn(Opcodes.IF_ICMPGE, l14);
+        mv.visitVarInsn(Opcodes.ALOAD, 4);
+        mv.visitVarInsn(Opcodes.ILOAD, 6);
+        mv.visitInsn(Opcodes.AALOAD);
+        mv.visitVarInsn(Opcodes.ASTORE, 7);
+        mv.visitVarInsn(Opcodes.ALOAD, 0);
+        mv.visitVarInsn(Opcodes.ALOAD, 1);
+        mv.visitVarInsn(Opcodes.ALOAD, 7);
+        mv.visitMethodInsn(Opcodes.INVOKESPECIAL, "com/oracle/tools/packager/windows/WinAppBundler", "copyMSVCDLLs", "(Ljava/io/File;Ljava/lang/String;)Z", false);
         Label l15 = new Label();
-        mv.visitJumpInsn(org.objectweb.asm.Opcodes.IFEQ, l15);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, 7);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ASTORE, 3);
-        mv.visitJumpInsn(org.objectweb.asm.Opcodes.GOTO, l14);
+        mv.visitJumpInsn(Opcodes.IFEQ, l15);
+        mv.visitVarInsn(Opcodes.ALOAD, 7);
+        mv.visitVarInsn(Opcodes.ASTORE, 3);
+        mv.visitJumpInsn(Opcodes.GOTO, l14);
         mv.visitLabel(l15);
         mv.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
         mv.visitIincInsn(6, 1);
-        mv.visitJumpInsn(org.objectweb.asm.Opcodes.GOTO, l13);
+        mv.visitJumpInsn(Opcodes.GOTO, l13);
         mv.visitLabel(l14);
         mv.visitFrame(Opcodes.F_CHOP, 3, null, 0, null);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, 3);
+        mv.visitVarInsn(Opcodes.ALOAD, 3);
         Label l16 = new Label();
-        mv.visitJumpInsn(org.objectweb.asm.Opcodes.IFNONNULL, l16);
-        mv.visitTypeInsn(org.objectweb.asm.Opcodes.NEW, "java/lang/RuntimeException");
-        mv.visitInsn(org.objectweb.asm.Opcodes.DUP);
+        mv.visitJumpInsn(Opcodes.IFNONNULL, l16);
+        mv.visitTypeInsn(Opcodes.NEW, "java/lang/RuntimeException");
+        mv.visitInsn(Opcodes.DUP);
         mv.visitLdcInsn("Not found MSVC dlls");
-        mv.visitMethodInsn(org.objectweb.asm.Opcodes.INVOKESPECIAL, "java/lang/RuntimeException", "<init>", "(Ljava/lang/String;)V", false);
-        mv.visitInsn(org.objectweb.asm.Opcodes.ATHROW);
+        mv.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/lang/RuntimeException", "<init>", "(Ljava/lang/String;)V", false);
+        mv.visitInsn(Opcodes.ATHROW);
         mv.visitLabel(l16);
         mv.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
-        mv.visitTypeInsn(org.objectweb.asm.Opcodes.NEW, "java/util/concurrent/atomic/AtomicReference");
-        mv.visitInsn(org.objectweb.asm.Opcodes.DUP);
-        mv.visitMethodInsn(org.objectweb.asm.Opcodes.INVOKESPECIAL, "java/util/concurrent/atomic/AtomicReference", "<init>", "()V", false);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ASTORE, 4);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, 3);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ASTORE, 5);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, 2);
-        mv.visitMethodInsn(org.objectweb.asm.Opcodes.INVOKEVIRTUAL, javaioFile, "toPath", "()Ljava/nio/file/Path;", false);
+        mv.visitTypeInsn(Opcodes.NEW, "java/util/concurrent/atomic/AtomicReference");
+        mv.visitInsn(Opcodes.DUP);
+        mv.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/util/concurrent/atomic/AtomicReference", "<init>", "()V", false);
+        mv.visitVarInsn(Opcodes.ASTORE, 4);
+        mv.visitVarInsn(Opcodes.ALOAD, 3);
+        mv.visitVarInsn(Opcodes.ASTORE, 5);
+        mv.visitVarInsn(Opcodes.ALOAD, 2);
+        mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, javaioFile, "toPath", "()Ljava/nio/file/Path;", false);
         mv.visitLdcInsn("bin");
-        mv.visitMethodInsn(org.objectweb.asm.Opcodes.INVOKEINTERFACE, "java/nio/file/Path", "resolve", "(Ljava/lang/String;)Ljava/nio/file/Path;", true);
-        mv.visitMethodInsn(org.objectweb.asm.Opcodes.INVOKESTATIC, "java/nio/file/Files", "list", "(Ljava/nio/file/Path;)Ljava/util/stream/Stream;", false);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ASTORE, 6);
-        mv.visitInsn(org.objectweb.asm.Opcodes.ACONST_NULL);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ASTORE, 7);
+        mv.visitMethodInsn(Opcodes.INVOKEINTERFACE, "java/nio/file/Path", "resolve", "(Ljava/lang/String;)Ljava/nio/file/Path;", true);
+        mv.visitMethodInsn(Opcodes.INVOKESTATIC, "java/nio/file/Files", "list", "(Ljava/nio/file/Path;)Ljava/util/stream/Stream;", false);
+        mv.visitVarInsn(Opcodes.ASTORE, 6);
+        mv.visitInsn(Opcodes.ACONST_NULL);
+        mv.visitVarInsn(Opcodes.ASTORE, 7);
         mv.visitLabel(l3);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, 6);
-        mv.visitInvokeDynamicInsn("test", "()Ljava/util/function/Predicate;", new Handle(org.objectweb.asm.Opcodes.H_INVOKESTATIC, "java/lang/invoke/LambdaMetafactory", "metafactory", "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodHandle;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;"), new Object[]{Type.getType("(Ljava/lang/Object;)Z"), new Handle(org.objectweb.asm.Opcodes.H_INVOKESTATIC, "com/oracle/tools/packager/windows/WinAppBundler", "lambda$copyMSVCDLLs$8", "(Ljava/nio/file/Path;)Z"), Type.getType("(Ljava/nio/file/Path;)Z")});
-        mv.visitMethodInsn(org.objectweb.asm.Opcodes.INVOKEINTERFACE, "java/util/stream/Stream", "filter", "(Ljava/util/function/Predicate;)Ljava/util/stream/Stream;", true);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, 5);
-        mv.visitInvokeDynamicInsn("test", "(Ljava/lang/String;)Ljava/util/function/Predicate;", new Handle(org.objectweb.asm.Opcodes.H_INVOKESTATIC, "java/lang/invoke/LambdaMetafactory", "metafactory", "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodHandle;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;"), new Object[]{Type.getType("(Ljava/lang/Object;)Z"), new Handle(org.objectweb.asm.Opcodes.H_INVOKESTATIC, "com/oracle/tools/packager/windows/WinAppBundler", "lambda$copyMSVCDLLs$9", "(Ljava/lang/String;Ljava/nio/file/Path;)Z"), Type.getType("(Ljava/nio/file/Path;)Z")});
-        mv.visitMethodInsn(org.objectweb.asm.Opcodes.INVOKEINTERFACE, "java/util/stream/Stream", "filter", "(Ljava/util/function/Predicate;)Ljava/util/stream/Stream;", true);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, 1);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, 4);
-        mv.visitInvokeDynamicInsn("accept", "(Ljava/io/File;Ljava/util/concurrent/atomic/AtomicReference;)Ljava/util/function/Consumer;", new Handle(org.objectweb.asm.Opcodes.H_INVOKESTATIC, "java/lang/invoke/LambdaMetafactory", "metafactory", "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodHandle;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;"), new Object[]{Type.getType("(Ljava/lang/Object;)V"), new Handle(org.objectweb.asm.Opcodes.H_INVOKESTATIC, "com/oracle/tools/packager/windows/WinAppBundler", "lambda$copyMSVCDLLs$10", "(Ljava/io/File;Ljava/util/concurrent/atomic/AtomicReference;Ljava/nio/file/Path;)V"), Type.getType("(Ljava/nio/file/Path;)V")});
-        mv.visitMethodInsn(org.objectweb.asm.Opcodes.INVOKEINTERFACE, "java/util/stream/Stream", "forEach", "(Ljava/util/function/Consumer;)V", true);
+        mv.visitVarInsn(Opcodes.ALOAD, 6);
+        mv.visitInvokeDynamicInsn("test", "()Ljava/util/function/Predicate;", new Handle(Opcodes.H_INVOKESTATIC, "java/lang/invoke/LambdaMetafactory", "metafactory", "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodHandle;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;"), new Object[]{Type.getType("(Ljava/lang/Object;)Z"), new Handle(Opcodes.H_INVOKESTATIC, "com/oracle/tools/packager/windows/WinAppBundler", "lambda$copyMSVCDLLs$8", "(Ljava/nio/file/Path;)Z"), Type.getType("(Ljava/nio/file/Path;)Z")});
+        mv.visitMethodInsn(Opcodes.INVOKEINTERFACE, "java/util/stream/Stream", "filter", "(Ljava/util/function/Predicate;)Ljava/util/stream/Stream;", true);
+        mv.visitVarInsn(Opcodes.ALOAD, 5);
+        mv.visitInvokeDynamicInsn("test", "(Ljava/lang/String;)Ljava/util/function/Predicate;", new Handle(Opcodes.H_INVOKESTATIC, "java/lang/invoke/LambdaMetafactory", "metafactory", "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodHandle;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;"), new Object[]{Type.getType("(Ljava/lang/Object;)Z"), new Handle(Opcodes.H_INVOKESTATIC, "com/oracle/tools/packager/windows/WinAppBundler", "lambda$copyMSVCDLLs$9", "(Ljava/lang/String;Ljava/nio/file/Path;)Z"), Type.getType("(Ljava/nio/file/Path;)Z")});
+        mv.visitMethodInsn(Opcodes.INVOKEINTERFACE, "java/util/stream/Stream", "filter", "(Ljava/util/function/Predicate;)Ljava/util/stream/Stream;", true);
+        mv.visitVarInsn(Opcodes.ALOAD, 1);
+        mv.visitVarInsn(Opcodes.ALOAD, 4);
+        mv.visitInvokeDynamicInsn("accept", "(Ljava/io/File;Ljava/util/concurrent/atomic/AtomicReference;)Ljava/util/function/Consumer;", new Handle(Opcodes.H_INVOKESTATIC, "java/lang/invoke/LambdaMetafactory", "metafactory", "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodHandle;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;"), new Object[]{Type.getType("(Ljava/lang/Object;)V"), new Handle(Opcodes.H_INVOKESTATIC, "com/oracle/tools/packager/windows/WinAppBundler", "lambda$copyMSVCDLLs$10", "(Ljava/io/File;Ljava/util/concurrent/atomic/AtomicReference;Ljava/nio/file/Path;)V"), Type.getType("(Ljava/nio/file/Path;)V")});
+        mv.visitMethodInsn(Opcodes.INVOKEINTERFACE, "java/util/stream/Stream", "forEach", "(Ljava/util/function/Consumer;)V", true);
         mv.visitLabel(l4);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, 6);
+        mv.visitVarInsn(Opcodes.ALOAD, 6);
         Label l17 = new Label();
-        mv.visitJumpInsn(org.objectweb.asm.Opcodes.IFNULL, l17);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, 7);
+        mv.visitJumpInsn(Opcodes.IFNULL, l17);
+        mv.visitVarInsn(Opcodes.ALOAD, 7);
         Label l18 = new Label();
-        mv.visitJumpInsn(org.objectweb.asm.Opcodes.IFNULL, l18);
+        mv.visitJumpInsn(Opcodes.IFNULL, l18);
         mv.visitLabel(l0);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, 6);
-        mv.visitMethodInsn(org.objectweb.asm.Opcodes.INVOKEINTERFACE, "java/util/stream/Stream", "close", "()V", true);
+        mv.visitVarInsn(Opcodes.ALOAD, 6);
+        mv.visitMethodInsn(Opcodes.INVOKEINTERFACE, "java/util/stream/Stream", "close", "()V", true);
         mv.visitLabel(l1);
-        mv.visitJumpInsn(org.objectweb.asm.Opcodes.GOTO, l17);
+        mv.visitJumpInsn(Opcodes.GOTO, l17);
         mv.visitLabel(l2);
         mv.visitFrame(Opcodes.F_FULL, 8, new Object[]{"com/oracle/tools/packager/windows/WinAppBundler", javaioFile, javaioFile, javalangString, "java/util/concurrent/atomic/AtomicReference", javalangString, "java/util/stream/Stream", javalangThrowable}, 1, new Object[]{javalangThrowable});
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ASTORE, 8);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, 7);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, 8);
-        mv.visitMethodInsn(org.objectweb.asm.Opcodes.INVOKEVIRTUAL, javalangThrowable, "addSuppressed", "(Ljava/lang/Throwable;)V", false);
-        mv.visitJumpInsn(org.objectweb.asm.Opcodes.GOTO, l17);
+        mv.visitVarInsn(Opcodes.ASTORE, 8);
+        mv.visitVarInsn(Opcodes.ALOAD, 7);
+        mv.visitVarInsn(Opcodes.ALOAD, 8);
+        mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, javalangThrowable, "addSuppressed", "(Ljava/lang/Throwable;)V", false);
+        mv.visitJumpInsn(Opcodes.GOTO, l17);
         mv.visitLabel(l18);
         mv.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, 6);
-        mv.visitMethodInsn(org.objectweb.asm.Opcodes.INVOKEINTERFACE, "java/util/stream/Stream", "close", "()V", true);
-        mv.visitJumpInsn(org.objectweb.asm.Opcodes.GOTO, l17);
+        mv.visitVarInsn(Opcodes.ALOAD, 6);
+        mv.visitMethodInsn(Opcodes.INVOKEINTERFACE, "java/util/stream/Stream", "close", "()V", true);
+        mv.visitJumpInsn(Opcodes.GOTO, l17);
         mv.visitLabel(l5);
         mv.visitFrame(Opcodes.F_SAME1, 0, null, 1, new Object[]{javalangThrowable});
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ASTORE, 8);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, 8);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ASTORE, 7);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, 8);
-        mv.visitInsn(org.objectweb.asm.Opcodes.ATHROW);
+        mv.visitVarInsn(Opcodes.ASTORE, 8);
+        mv.visitVarInsn(Opcodes.ALOAD, 8);
+        mv.visitVarInsn(Opcodes.ASTORE, 7);
+        mv.visitVarInsn(Opcodes.ALOAD, 8);
+        mv.visitInsn(Opcodes.ATHROW);
         mv.visitLabel(l6);
         mv.visitFrame(Opcodes.F_SAME1, 0, null, 1, new Object[]{javalangThrowable});
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ASTORE, 9);
+        mv.visitVarInsn(Opcodes.ASTORE, 9);
         mv.visitLabel(l10);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, 6);
+        mv.visitVarInsn(Opcodes.ALOAD, 6);
         Label l19 = new Label();
-        mv.visitJumpInsn(org.objectweb.asm.Opcodes.IFNULL, l19);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, 7);
+        mv.visitJumpInsn(Opcodes.IFNULL, l19);
+        mv.visitVarInsn(Opcodes.ALOAD, 7);
         Label l20 = new Label();
-        mv.visitJumpInsn(org.objectweb.asm.Opcodes.IFNULL, l20);
+        mv.visitJumpInsn(Opcodes.IFNULL, l20);
         mv.visitLabel(l7);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, 6);
-        mv.visitMethodInsn(org.objectweb.asm.Opcodes.INVOKEINTERFACE, "java/util/stream/Stream", "close", "()V", true);
+        mv.visitVarInsn(Opcodes.ALOAD, 6);
+        mv.visitMethodInsn(Opcodes.INVOKEINTERFACE, "java/util/stream/Stream", "close", "()V", true);
         mv.visitLabel(l8);
-        mv.visitJumpInsn(org.objectweb.asm.Opcodes.GOTO, l19);
+        mv.visitJumpInsn(Opcodes.GOTO, l19);
         mv.visitLabel(l9);
         mv.visitFrame(Opcodes.F_FULL, 10, new Object[]{"com/oracle/tools/packager/windows/WinAppBundler", javaioFile, javaioFile, javalangString, "java/util/concurrent/atomic/AtomicReference", javalangString, "java/util/stream/Stream", javalangThrowable, Opcodes.TOP, javalangThrowable}, 1, new Object[]{javalangThrowable});
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ASTORE, 10);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, 7);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, 10);
-        mv.visitMethodInsn(org.objectweb.asm.Opcodes.INVOKEVIRTUAL, javalangThrowable, "addSuppressed", "(Ljava/lang/Throwable;)V", false);
-        mv.visitJumpInsn(org.objectweb.asm.Opcodes.GOTO, l19);
+        mv.visitVarInsn(Opcodes.ASTORE, 10);
+        mv.visitVarInsn(Opcodes.ALOAD, 7);
+        mv.visitVarInsn(Opcodes.ALOAD, 10);
+        mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, javalangThrowable, "addSuppressed", "(Ljava/lang/Throwable;)V", false);
+        mv.visitJumpInsn(Opcodes.GOTO, l19);
         mv.visitLabel(l20);
         mv.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, 6);
-        mv.visitMethodInsn(org.objectweb.asm.Opcodes.INVOKEINTERFACE, "java/util/stream/Stream", "close", "()V", true);
+        mv.visitVarInsn(Opcodes.ALOAD, 6);
+        mv.visitMethodInsn(Opcodes.INVOKEINTERFACE, "java/util/stream/Stream", "close", "()V", true);
         mv.visitLabel(l19);
         mv.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, 9);
-        mv.visitInsn(org.objectweb.asm.Opcodes.ATHROW);
+        mv.visitVarInsn(Opcodes.ALOAD, 9);
+        mv.visitInsn(Opcodes.ATHROW);
         mv.visitLabel(l17);
         mv.visitFrame(Opcodes.F_FULL, 6, new Object[]{"com/oracle/tools/packager/windows/WinAppBundler", javaioFile, javaioFile, javalangString, "java/util/concurrent/atomic/AtomicReference", javalangString}, 0, new Object[]{});
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, 4);
-        mv.visitMethodInsn(org.objectweb.asm.Opcodes.INVOKEVIRTUAL, "java/util/concurrent/atomic/AtomicReference", "get", "()Ljava/lang/Object;", false);
-        mv.visitTypeInsn(org.objectweb.asm.Opcodes.CHECKCAST, "java/io/IOException");
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ASTORE, 6);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, 6);
+        mv.visitVarInsn(Opcodes.ALOAD, 4);
+        mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/util/concurrent/atomic/AtomicReference", "get", "()Ljava/lang/Object;", false);
+        mv.visitTypeInsn(Opcodes.CHECKCAST, "java/io/IOException");
+        mv.visitVarInsn(Opcodes.ASTORE, 6);
+        mv.visitVarInsn(Opcodes.ALOAD, 6);
         Label l21 = new Label();
-        mv.visitJumpInsn(org.objectweb.asm.Opcodes.IFNULL, l21);
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, 6);
-        mv.visitInsn(org.objectweb.asm.Opcodes.ATHROW);
+        mv.visitJumpInsn(Opcodes.IFNULL, l21);
+        mv.visitVarInsn(Opcodes.ALOAD, 6);
+        mv.visitInsn(Opcodes.ATHROW);
         mv.visitLabel(l21);
         mv.visitFrame(Opcodes.F_APPEND, 1, new Object[]{"java/io/IOException"}, 0, null);
-        mv.visitInsn(org.objectweb.asm.Opcodes.RETURN);
+        mv.visitInsn(Opcodes.RETURN);
         mv.visitMaxs(3, 11);
         mv.visitEnd();
 
