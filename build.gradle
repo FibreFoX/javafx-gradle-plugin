@@ -29,7 +29,8 @@ repositories {
 dependencies {
     compile gradleApi()
     compile files("${System.properties['java.home']}/../lib/ant-javafx.jar")
-    runtime 'org.ow2.asm:asm-all:5.0.3'
+    compile 'org.apache.bcel:bcel:6.0'
+    runtime 'org.apache.bcel:bcel:6.0'
 }
 
 group = 'de.dynamicfiles.projects.gradle.plugins'
@@ -48,15 +49,6 @@ task sourcesJar(type: Jar) {
     from sourceSets.main.allSource
 }
 
-// http://stackoverflow.com/a/22991189/1961102
-compileJava.dependsOn 'checkstyle'
-task checkstyle(type: Checkstyle) {
-    configFile file("${project.rootDir}/config/checkstyle/checkstyle.xml")
-    configProperties.checkstyleConfigDir = file("${project.rootDir}/config/checkstyle")
-    source 'src'
-    include '**/*.java'
-    classpath = files()
-}
 test {
     useTestNG()
     testLogging.showStandardStreams = true

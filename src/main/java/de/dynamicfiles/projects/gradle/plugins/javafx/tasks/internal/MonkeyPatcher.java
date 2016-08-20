@@ -15,7 +15,6 @@
  */
 package de.dynamicfiles.projects.gradle.plugins.javafx.tasks.internal;
 
-import de.dynamicfiles.projects.gradle.plugins.javafx.JavaFXGradlePlugin;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -24,14 +23,34 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.jar.JarFile;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
-import org.gradle.api.GradleException;
-import org.objectweb.asm.*;
+import org.apache.bcel.Const;
+import org.apache.bcel.classfile.Attribute;
+import org.apache.bcel.classfile.ClassFormatException;
+import org.apache.bcel.classfile.ClassParser;
+import org.apache.bcel.classfile.JavaClass;
+import org.apache.bcel.classfile.Method;
+import org.apache.bcel.classfile.StackMap;
+import org.apache.bcel.generic.ArrayType;
+import org.apache.bcel.generic.BranchInstruction;
+import org.apache.bcel.generic.ClassGen;
+import org.apache.bcel.generic.ConstantPoolGen;
+import org.apache.bcel.generic.IINC;
+import org.apache.bcel.generic.InstructionConst;
+import org.apache.bcel.generic.InstructionFactory;
+import org.apache.bcel.generic.InstructionHandle;
+import org.apache.bcel.generic.InstructionList;
+import org.apache.bcel.generic.MethodGen;
+import org.apache.bcel.generic.ObjectType;
+import org.apache.bcel.generic.PUSH;
+import org.apache.bcel.generic.Type;
 
 /**
  *
@@ -43,18 +62,12 @@ public class MonkeyPatcher {
     private static final String METHOD_SIGNATURE_TO_MONKEY_PATCH = "(Ljava/io/File;Ljava/io/File;)V";
     private static final String FAULTY_CLASSFILE_TO_MONKEY_PATCH = "com/oracle/tools/packager/windows/WinAppBundler.class";
 
-    public URL getPatchedJfxAntJar() throws MalformedURLException {
-        String jfxAntJarPath = "/../lib/" + JavaFXGradlePlugin.ANT_JAVAFX_JAR_FILENAME;
-
-        // on java 9, we have a different path
-        if( JavaDetectionTools.IS_JAVA_9 ){
-            jfxAntJarPath = "/lib/" + JavaFXGradlePlugin.ANT_JAVAFX_JAR_FILENAME;
-        }
-
+    public static URL getPatchedJfxAntJar() throws MalformedURLException {
+        String jfxAntJarPath = "/../lib/ant-javafx.jar";
         File jfxAntJar = new File(System.getProperty("java.home") + jfxAntJarPath);
 
         if( !jfxAntJar.exists() ){
-            throw new GradleException("Couldn't find Ant-JavaFX-library, please make sure you've installed some JDK which includes JavaFX (e.g. OracleJDK or OpenJDK and OpenJFX), and JAVA_HOME is set properly.");
+            throw new RuntimeException("Couldn't find Ant-JavaFX-library, please make sure you've installed some JDK which includes JavaFX (e.g. OracleJDK or OpenJDK and OpenJFX), and JAVA_HOME is set properly.");
         }
 
         // open jar-file as inputstream
@@ -66,12 +79,12 @@ public class MonkeyPatcher {
         try{
             Path tempDirectory = Files.createTempDirectory("javafx-gradle-plugin-workaround");
             // delete that crap after JVM being shut down
-            tempDirectory.toFile().deleteOnExit();
+//            tempDirectory.toFile().deleteOnExit();
 
             JarFile jarFile = new JarFile(jfxAntJar, false, JarFile.OPEN_READ);
-            File targetManipulatedJarFile = tempDirectory.resolve(JavaFXGradlePlugin.ANT_JAVAFX_JAR_FILENAME).toAbsolutePath().toFile();
+            File targetManipulatedJarFile = tempDirectory.resolve("ant-javafx.jar").toAbsolutePath().toFile();
             // delete that crap after JVM being shut down
-            targetManipulatedJarFile.deleteOnExit();
+//            targetManipulatedJarFile.deleteOnExit();
 
             AtomicBoolean useModifiedVersion = new AtomicBoolean(false);
 
@@ -87,25 +100,23 @@ public class MonkeyPatcher {
                             System.out.println("WE FOUND OUR BUGGY CLASS");
                             useModifiedVersion.set(true);
 
-                            ClassReader classReader = new ClassReader(jarFile.getInputStream(jarEntry));
-                            ClassWriter cw = new ClassWriter(classReader, ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
+                            ClassParser classParser = new ClassParser(jarFile.getInputStream(jarEntry), FAULTY_CLASSFILE_TO_MONKEY_PATCH);
+                            JavaClass parsedJavaClass = classParser.parse();
 
-                            classReader.accept(new ClassVisitor(Opcodes.ASM5) {
-                                @Override
-                                public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
-                                    if( !(name.equals(METHOD_TO_MONKEY_PATCH) && desc.equals(METHOD_SIGNATURE_TO_MONKEY_PATCH)) ){
-                                        return super.visitMethod(access, name, desc, signature, exceptions);
-                                    }
-
-                                    System.out.println("WE FOUND OUR BUGGY METHOD");
-
-                                    return monkeyPatch_WinAppBundler_Java8(cw);
+                            ClassGen classGenerator = new ClassGen(parsedJavaClass);
+                            Arrays.asList(parsedJavaClass.getMethods()).stream().forEach(method -> {
+                                if( method.getName().equals(METHOD_TO_MONKEY_PATCH) && method.getSignature().equals(METHOD_SIGNATURE_TO_MONKEY_PATCH) ){
+                                    classGenerator.removeMethod(method);
+                                    System.out.println("found evil beast");
+//                                    createMonkeyPatchedMethodFromBCEL(classGenerator.getConstantPool(), new InstructionFactory(classGenerator, classGenerator.getConstantPool()));
+//                                    classGenerator.replaceMethod(method, createMonkeyPatchedMethodFromBCEL(classGenerator, method));
+                                    classGenerator.addMethod(createMonkeyPatchedMethodFromBCEL(classGenerator, method));
                                 }
+                            });
 
-                            }, 0);
+                            classGenerator.update();
 
-                            byte[] generatedBytes = cw.toByteArray();
-                            zipOutputStream.write(generatedBytes);
+                            zipOutputStream.write(classGenerator.getJavaClass().getBytes());
                         } else {
                             InputStream storedInputStream = jarFile.getInputStream(jarEntry);
                             int count;
@@ -115,7 +126,7 @@ public class MonkeyPatcher {
                             }
                         }
                         zipOutputStream.flush();
-                    } catch(IOException ex){
+                    } catch(NullPointerException | IOException ex){
                         Logger.getLogger(MonkeyPatcher.class.getName()).log(Level.SEVERE, null, ex);
                     }
                 });
@@ -130,198 +141,237 @@ public class MonkeyPatcher {
         return jfxAntJar.toURI().toURL();
     }
 
-    /*
-     * This mostly got generated from ASM itself
-     */
-    private MethodVisitor monkeyPatch_WinAppBundler_Java8(ClassWriter cw) {
-        String javalangThrowable = "java/lang/Throwable";
-        String javaioFile = "java/io/File";
-        String javalangString = "java/lang/String";
+    private static Attribute getFixedMethodCodeAttribute() {
+        AtomicReference<Attribute> foundMethodAttribute = new AtomicReference<>(null);
+        try{
+            ClassParser classParser = new ClassParser(Thread.currentThread().getContextClassLoader().getResourceAsStream(MonkeyPatcher.class.getName().replace(".", "/").replace("/MonkeyPatcher", "/") + "WinAppBundler_fixed.class"), FAULTY_CLASSFILE_TO_MONKEY_PATCH);
+            JavaClass parsedJavaClass = classParser.parse();
 
-        MethodVisitor mv = cw.visitMethod(Opcodes.ACC_PRIVATE, METHOD_TO_MONKEY_PATCH, METHOD_SIGNATURE_TO_MONKEY_PATCH, null, new String[]{"java/io/IOException"});
+            ClassGen classGenerator = new ClassGen(parsedJavaClass);
+            Arrays.asList(classGenerator.getMethods()).stream().forEach(method -> {
+                if( method.getName().equals(METHOD_TO_MONKEY_PATCH) && method.getSignature().equals(METHOD_SIGNATURE_TO_MONKEY_PATCH) ){
+                    MethodGen methodGen = new MethodGen(method, METHOD_TO_MONKEY_PATCH, classGenerator.getConstantPool());
+                    Arrays.asList(methodGen.getCodeAttributes()).stream().forEach(attribute -> {
+                        if( "StackMapTable".equals(attribute.getName()) ){
+                            foundMethodAttribute.set(attribute);
+                        }
+                    });
+                }
+            });
+        } catch(IOException | ClassFormatException ex){
+            Logger.getLogger(MonkeyPatcher.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return foundMethodAttribute.get();
+    }
 
-        mv.visitCode();
-        Label l0 = new Label();
-        Label l1 = new Label();
-        Label l2 = new Label();
-        mv.visitTryCatchBlock(l0, l1, l2, javalangThrowable);
-        Label l3 = new Label();
-        Label l4 = new Label();
-        Label l5 = new Label();
-        mv.visitTryCatchBlock(l3, l4, l5, javalangThrowable);
-        Label l6 = new Label();
-        mv.visitTryCatchBlock(l3, l4, l6, null);
-        Label l7 = new Label();
-        Label l8 = new Label();
-        Label l9 = new Label();
-        mv.visitTryCatchBlock(l7, l8, l9, javalangThrowable);
-        Label l10 = new Label();
-        mv.visitTryCatchBlock(l5, l10, l6, null);
-        mv.visitInsn(Opcodes.ACONST_NULL);
-        mv.visitVarInsn(Opcodes.ASTORE, 3);
-        mv.visitVarInsn(Opcodes.ALOAD, 2);
-        Label l11 = new Label();
-        mv.visitJumpInsn(Opcodes.IFNULL, l11);
-        mv.visitVarInsn(Opcodes.ALOAD, 2);
-        mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, javaioFile, "isDirectory", "()Z", false);
-        Label l12 = new Label();
-        mv.visitJumpInsn(Opcodes.IFNE, l12);
-        mv.visitLabel(l11);
-        mv.visitFrame(Opcodes.F_APPEND, 1, new Object[]{javalangString}, 0, null);
-        mv.visitTypeInsn(Opcodes.NEW, javaioFile);
-        mv.visitInsn(Opcodes.DUP);
-        mv.visitLdcInsn("java.home");
-        mv.visitMethodInsn(Opcodes.INVOKESTATIC, "java/lang/System", "getProperty", "(Ljava/lang/String;)Ljava/lang/String;", false);
-        mv.visitMethodInsn(Opcodes.INVOKESPECIAL, javaioFile, "<init>", "(Ljava/lang/String;)V", false);
-        mv.visitVarInsn(Opcodes.ASTORE, 2);
-        mv.visitLabel(l12);
-        mv.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
-        mv.visitFieldInsn(Opcodes.GETSTATIC, "com/oracle/tools/packager/windows/WinAppBundler", "VS_VERS", "[Ljava/lang/String;");
-        mv.visitVarInsn(Opcodes.ASTORE, 4);
-        mv.visitVarInsn(Opcodes.ALOAD, 4);
-        mv.visitInsn(Opcodes.ARRAYLENGTH);
-        mv.visitVarInsn(Opcodes.ISTORE, 5);
-        mv.visitInsn(Opcodes.ICONST_0);
-        mv.visitVarInsn(Opcodes.ISTORE, 6);
-        Label l13 = new Label();
-        mv.visitLabel(l13);
-        mv.visitFrame(Opcodes.F_APPEND, 3, new Object[]{"[Ljava/lang/String;", Opcodes.INTEGER, Opcodes.INTEGER}, 0, null);
-        mv.visitVarInsn(Opcodes.ILOAD, 6);
-        mv.visitVarInsn(Opcodes.ILOAD, 5);
-        Label l14 = new Label();
-        mv.visitJumpInsn(Opcodes.IF_ICMPGE, l14);
-        mv.visitVarInsn(Opcodes.ALOAD, 4);
-        mv.visitVarInsn(Opcodes.ILOAD, 6);
-        mv.visitInsn(Opcodes.AALOAD);
-        mv.visitVarInsn(Opcodes.ASTORE, 7);
-        mv.visitVarInsn(Opcodes.ALOAD, 0);
-        mv.visitVarInsn(Opcodes.ALOAD, 1);
-        mv.visitVarInsn(Opcodes.ALOAD, 7);
-        mv.visitMethodInsn(Opcodes.INVOKESPECIAL, "com/oracle/tools/packager/windows/WinAppBundler", "copyMSVCDLLs", "(Ljava/io/File;Ljava/lang/String;)Z", false);
-        Label l15 = new Label();
-        mv.visitJumpInsn(Opcodes.IFEQ, l15);
-        mv.visitVarInsn(Opcodes.ALOAD, 7);
-        mv.visitVarInsn(Opcodes.ASTORE, 3);
-        mv.visitJumpInsn(Opcodes.GOTO, l14);
-        mv.visitLabel(l15);
-        mv.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
-        mv.visitIincInsn(6, 1);
-        mv.visitJumpInsn(Opcodes.GOTO, l13);
-        mv.visitLabel(l14);
-        mv.visitFrame(Opcodes.F_CHOP, 3, null, 0, null);
-        mv.visitVarInsn(Opcodes.ALOAD, 3);
-        Label l16 = new Label();
-        mv.visitJumpInsn(Opcodes.IFNONNULL, l16);
-        mv.visitTypeInsn(Opcodes.NEW, "java/lang/RuntimeException");
-        mv.visitInsn(Opcodes.DUP);
-        mv.visitLdcInsn("Not found MSVC dlls");
-        mv.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/lang/RuntimeException", "<init>", "(Ljava/lang/String;)V", false);
-        mv.visitInsn(Opcodes.ATHROW);
-        mv.visitLabel(l16);
-        mv.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
-        mv.visitTypeInsn(Opcodes.NEW, "java/util/concurrent/atomic/AtomicReference");
-        mv.visitInsn(Opcodes.DUP);
-        mv.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/util/concurrent/atomic/AtomicReference", "<init>", "()V", false);
-        mv.visitVarInsn(Opcodes.ASTORE, 4);
-        mv.visitVarInsn(Opcodes.ALOAD, 3);
-        mv.visitVarInsn(Opcodes.ASTORE, 5);
-        mv.visitVarInsn(Opcodes.ALOAD, 2);
-        mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, javaioFile, "toPath", "()Ljava/nio/file/Path;", false);
-        mv.visitLdcInsn("bin");
-        mv.visitMethodInsn(Opcodes.INVOKEINTERFACE, "java/nio/file/Path", "resolve", "(Ljava/lang/String;)Ljava/nio/file/Path;", true);
-        mv.visitMethodInsn(Opcodes.INVOKESTATIC, "java/nio/file/Files", "list", "(Ljava/nio/file/Path;)Ljava/util/stream/Stream;", false);
-        mv.visitVarInsn(Opcodes.ASTORE, 6);
-        mv.visitInsn(Opcodes.ACONST_NULL);
-        mv.visitVarInsn(Opcodes.ASTORE, 7);
-        mv.visitLabel(l3);
-        mv.visitVarInsn(Opcodes.ALOAD, 6);
-        mv.visitInvokeDynamicInsn("test", "()Ljava/util/function/Predicate;", new Handle(Opcodes.H_INVOKESTATIC, "java/lang/invoke/LambdaMetafactory", "metafactory", "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodHandle;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;"), new Object[]{Type.getType("(Ljava/lang/Object;)Z"), new Handle(Opcodes.H_INVOKESTATIC, "com/oracle/tools/packager/windows/WinAppBundler", "lambda$copyMSVCDLLs$8", "(Ljava/nio/file/Path;)Z"), Type.getType("(Ljava/nio/file/Path;)Z")});
-        mv.visitMethodInsn(Opcodes.INVOKEINTERFACE, "java/util/stream/Stream", "filter", "(Ljava/util/function/Predicate;)Ljava/util/stream/Stream;", true);
-        mv.visitVarInsn(Opcodes.ALOAD, 5);
-        mv.visitInvokeDynamicInsn("test", "(Ljava/lang/String;)Ljava/util/function/Predicate;", new Handle(Opcodes.H_INVOKESTATIC, "java/lang/invoke/LambdaMetafactory", "metafactory", "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodHandle;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;"), new Object[]{Type.getType("(Ljava/lang/Object;)Z"), new Handle(Opcodes.H_INVOKESTATIC, "com/oracle/tools/packager/windows/WinAppBundler", "lambda$copyMSVCDLLs$9", "(Ljava/lang/String;Ljava/nio/file/Path;)Z"), Type.getType("(Ljava/nio/file/Path;)Z")});
-        mv.visitMethodInsn(Opcodes.INVOKEINTERFACE, "java/util/stream/Stream", "filter", "(Ljava/util/function/Predicate;)Ljava/util/stream/Stream;", true);
-        mv.visitVarInsn(Opcodes.ALOAD, 1);
-        mv.visitVarInsn(Opcodes.ALOAD, 4);
-        mv.visitInvokeDynamicInsn("accept", "(Ljava/io/File;Ljava/util/concurrent/atomic/AtomicReference;)Ljava/util/function/Consumer;", new Handle(Opcodes.H_INVOKESTATIC, "java/lang/invoke/LambdaMetafactory", "metafactory", "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodHandle;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;"), new Object[]{Type.getType("(Ljava/lang/Object;)V"), new Handle(Opcodes.H_INVOKESTATIC, "com/oracle/tools/packager/windows/WinAppBundler", "lambda$copyMSVCDLLs$10", "(Ljava/io/File;Ljava/util/concurrent/atomic/AtomicReference;Ljava/nio/file/Path;)V"), Type.getType("(Ljava/nio/file/Path;)V")});
-        mv.visitMethodInsn(Opcodes.INVOKEINTERFACE, "java/util/stream/Stream", "forEach", "(Ljava/util/function/Consumer;)V", true);
-        mv.visitLabel(l4);
-        mv.visitVarInsn(Opcodes.ALOAD, 6);
-        Label l17 = new Label();
-        mv.visitJumpInsn(Opcodes.IFNULL, l17);
-        mv.visitVarInsn(Opcodes.ALOAD, 7);
-        Label l18 = new Label();
-        mv.visitJumpInsn(Opcodes.IFNULL, l18);
-        mv.visitLabel(l0);
-        mv.visitVarInsn(Opcodes.ALOAD, 6);
-        mv.visitMethodInsn(Opcodes.INVOKEINTERFACE, "java/util/stream/Stream", "close", "()V", true);
-        mv.visitLabel(l1);
-        mv.visitJumpInsn(Opcodes.GOTO, l17);
-        mv.visitLabel(l2);
-        mv.visitFrame(Opcodes.F_FULL, 8, new Object[]{"com/oracle/tools/packager/windows/WinAppBundler", javaioFile, javaioFile, javalangString, "java/util/concurrent/atomic/AtomicReference", javalangString, "java/util/stream/Stream", javalangThrowable}, 1, new Object[]{javalangThrowable});
-        mv.visitVarInsn(Opcodes.ASTORE, 8);
-        mv.visitVarInsn(Opcodes.ALOAD, 7);
-        mv.visitVarInsn(Opcodes.ALOAD, 8);
-        mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, javalangThrowable, "addSuppressed", "(Ljava/lang/Throwable;)V", false);
-        mv.visitJumpInsn(Opcodes.GOTO, l17);
-        mv.visitLabel(l18);
-        mv.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
-        mv.visitVarInsn(Opcodes.ALOAD, 6);
-        mv.visitMethodInsn(Opcodes.INVOKEINTERFACE, "java/util/stream/Stream", "close", "()V", true);
-        mv.visitJumpInsn(Opcodes.GOTO, l17);
-        mv.visitLabel(l5);
-        mv.visitFrame(Opcodes.F_SAME1, 0, null, 1, new Object[]{javalangThrowable});
-        mv.visitVarInsn(Opcodes.ASTORE, 8);
-        mv.visitVarInsn(Opcodes.ALOAD, 8);
-        mv.visitVarInsn(Opcodes.ASTORE, 7);
-        mv.visitVarInsn(Opcodes.ALOAD, 8);
-        mv.visitInsn(Opcodes.ATHROW);
-        mv.visitLabel(l6);
-        mv.visitFrame(Opcodes.F_SAME1, 0, null, 1, new Object[]{javalangThrowable});
-        mv.visitVarInsn(Opcodes.ASTORE, 9);
-        mv.visitLabel(l10);
-        mv.visitVarInsn(Opcodes.ALOAD, 6);
-        Label l19 = new Label();
-        mv.visitJumpInsn(Opcodes.IFNULL, l19);
-        mv.visitVarInsn(Opcodes.ALOAD, 7);
-        Label l20 = new Label();
-        mv.visitJumpInsn(Opcodes.IFNULL, l20);
-        mv.visitLabel(l7);
-        mv.visitVarInsn(Opcodes.ALOAD, 6);
-        mv.visitMethodInsn(Opcodes.INVOKEINTERFACE, "java/util/stream/Stream", "close", "()V", true);
-        mv.visitLabel(l8);
-        mv.visitJumpInsn(Opcodes.GOTO, l19);
-        mv.visitLabel(l9);
-        mv.visitFrame(Opcodes.F_FULL, 10, new Object[]{"com/oracle/tools/packager/windows/WinAppBundler", javaioFile, javaioFile, javalangString, "java/util/concurrent/atomic/AtomicReference", javalangString, "java/util/stream/Stream", javalangThrowable, Opcodes.TOP, javalangThrowable}, 1, new Object[]{javalangThrowable});
-        mv.visitVarInsn(Opcodes.ASTORE, 10);
-        mv.visitVarInsn(Opcodes.ALOAD, 7);
-        mv.visitVarInsn(Opcodes.ALOAD, 10);
-        mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, javalangThrowable, "addSuppressed", "(Ljava/lang/Throwable;)V", false);
-        mv.visitJumpInsn(Opcodes.GOTO, l19);
-        mv.visitLabel(l20);
-        mv.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
-        mv.visitVarInsn(Opcodes.ALOAD, 6);
-        mv.visitMethodInsn(Opcodes.INVOKEINTERFACE, "java/util/stream/Stream", "close", "()V", true);
-        mv.visitLabel(l19);
-        mv.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
-        mv.visitVarInsn(Opcodes.ALOAD, 9);
-        mv.visitInsn(Opcodes.ATHROW);
-        mv.visitLabel(l17);
-        mv.visitFrame(Opcodes.F_FULL, 6, new Object[]{"com/oracle/tools/packager/windows/WinAppBundler", javaioFile, javaioFile, javalangString, "java/util/concurrent/atomic/AtomicReference", javalangString}, 0, new Object[]{});
-        mv.visitVarInsn(Opcodes.ALOAD, 4);
-        mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/util/concurrent/atomic/AtomicReference", "get", "()Ljava/lang/Object;", false);
-        mv.visitTypeInsn(Opcodes.CHECKCAST, "java/io/IOException");
-        mv.visitVarInsn(Opcodes.ASTORE, 6);
-        mv.visitVarInsn(Opcodes.ALOAD, 6);
-        Label l21 = new Label();
-        mv.visitJumpInsn(Opcodes.IFNULL, l21);
-        mv.visitVarInsn(Opcodes.ALOAD, 6);
-        mv.visitInsn(Opcodes.ATHROW);
-        mv.visitLabel(l21);
-        mv.visitFrame(Opcodes.F_APPEND, 1, new Object[]{"java/io/IOException"}, 0, null);
-        mv.visitInsn(Opcodes.RETURN);
-        mv.visitMaxs(3, 11);
-        mv.visitEnd();
+    private static Method createMonkeyPatchedMethodFromBCEL(ClassGen classGenerator, Method originalMethod) {
+        // java -cp "bcel-6.0.jar;." org.apache.bcel.util.BCELifier WinAppBundler_180_92.class >> WinAppBundler_180_92.java
+        InstructionList il = new InstructionList();
+        ConstantPoolGen constPoolGen = classGenerator.getConstantPool();
+//        MethodGen method = new MethodGen(Const.ACC_PRIVATE, Type.VOID, new Type[]{new ObjectType("java.io.File"), new ObjectType("java.io.File")}, new String[]{"arg0", "arg1"}, "copyMSVCDLLs", "com.oracle.tools.packager.windows.WinAppBundler", il, constPoolGen);
+        InstructionFactory _factory = new InstructionFactory(classGenerator, constPoolGen);
+        MethodGen method = new MethodGen(originalMethod, classGenerator.getFileName(), constPoolGen);
+        method.setInstructionList(il);
 
-        return mv;
+        InstructionHandle ih_0 = il.append(InstructionConst.ACONST_NULL);
+        il.append(_factory.createStore(Type.OBJECT, 3));
+        il.append(_factory.createLoad(Type.OBJECT, 2));
+        BranchInstruction ifnull_3 = _factory.createBranchInstruction(Const.IFNULL, null);
+        il.append(ifnull_3);
+        il.append(_factory.createLoad(Type.OBJECT, 2));
+        il.append(_factory.createInvoke("java.io.File", "isDirectory", Type.BOOLEAN, Type.NO_ARGS, Const.INVOKEVIRTUAL));
+        BranchInstruction ifne_10 = _factory.createBranchInstruction(Const.IFNE, null);
+        il.append(ifne_10);
+        InstructionHandle ih_13 = il.append(_factory.createNew("java.io.File"));
+        il.append(InstructionConst.DUP);
+        il.append(new PUSH(constPoolGen, "java.home"));
+        il.append(_factory.createInvoke("java.lang.System", "getProperty", Type.STRING, new Type[]{Type.STRING}, Const.INVOKESTATIC));
+        il.append(_factory.createInvoke("java.io.File", "<init>", Type.VOID, new Type[]{Type.STRING}, Const.INVOKESPECIAL));
+        il.append(_factory.createStore(Type.OBJECT, 2));
+        InstructionHandle ih_26 = il.append(_factory.createFieldAccess("com.oracle.tools.packager.windows.WinAppBundler", "VS_VERS", new ArrayType(Type.STRING, 1), Const.GETSTATIC));
+        il.append(_factory.createStore(Type.OBJECT, 4));
+        il.append(_factory.createLoad(Type.OBJECT, 4));
+        il.append(InstructionConst.ARRAYLENGTH);
+        il.append(_factory.createStore(Type.INT, 5));
+        il.append(new PUSH(constPoolGen, 0));
+        il.append(_factory.createStore(Type.INT, 6));
+        InstructionHandle ih_39 = il.append(_factory.createLoad(Type.INT, 6));
+        il.append(_factory.createLoad(Type.INT, 5));
+        BranchInstruction if_icmpge_43 = _factory.createBranchInstruction(Const.IF_ICMPGE, null);
+        il.append(if_icmpge_43);
+        il.append(_factory.createLoad(Type.OBJECT, 4));
+        il.append(_factory.createLoad(Type.INT, 6));
+        il.append(InstructionConst.AALOAD);
+        il.append(_factory.createStore(Type.OBJECT, 7));
+        il.append(_factory.createLoad(Type.OBJECT, 0));
+        il.append(_factory.createLoad(Type.OBJECT, 1));
+        il.append(_factory.createLoad(Type.OBJECT, 7));
+        il.append(_factory.createInvoke("com.oracle.tools.packager.windows.WinAppBundler", "copyMSVCDLLs", Type.BOOLEAN, new Type[]{new ObjectType("java.io.File"), Type.STRING}, Const.INVOKESPECIAL));
+        BranchInstruction ifeq_60 = _factory.createBranchInstruction(Const.IFEQ, null);
+        il.append(ifeq_60);
+        il.append(_factory.createLoad(Type.OBJECT, 7));
+        il.append(_factory.createStore(Type.OBJECT, 3));
+        BranchInstruction goto_66 = _factory.createBranchInstruction(Const.GOTO, null);
+        il.append(goto_66);
+        InstructionHandle ih_69 = il.append(new IINC(6, 1));
+        BranchInstruction goto_72 = _factory.createBranchInstruction(Const.GOTO, ih_39);
+        il.append(goto_72);
+        InstructionHandle ih_75 = il.append(_factory.createLoad(Type.OBJECT, 3));
+        BranchInstruction ifnonnull_76 = _factory.createBranchInstruction(Const.IFNONNULL, null);
+        il.append(ifnonnull_76);
+        il.append(_factory.createNew("java.lang.RuntimeException"));
+        il.append(InstructionConst.DUP);
+        il.append(new PUSH(constPoolGen, "Not found MSVC dlls"));
+        il.append(_factory.createInvoke("java.lang.RuntimeException", "<init>", Type.VOID, new Type[]{Type.STRING}, Const.INVOKESPECIAL));
+        il.append(InstructionConst.ATHROW);
+        InstructionHandle ih_89 = il.append(_factory.createNew("java.util.concurrent.atomic.AtomicReference"));
+        il.append(InstructionConst.DUP);
+        il.append(_factory.createInvoke("java.util.concurrent.atomic.AtomicReference", "<init>", Type.VOID, Type.NO_ARGS, Const.INVOKESPECIAL));
+        il.append(_factory.createStore(Type.OBJECT, 4));
+        il.append(_factory.createLoad(Type.OBJECT, 3));
+        il.append(_factory.createStore(Type.OBJECT, 5));
+        il.append(_factory.createLoad(Type.OBJECT, 2));
+        il.append(_factory.createInvoke("java.io.File", "toPath", new ObjectType("java.nio.file.Path"), Type.NO_ARGS, Const.INVOKEVIRTUAL));
+        il.append(new PUSH(constPoolGen, "bin"));
+        il.append(_factory.createInvoke("java.nio.file.Path", "resolve", new ObjectType("java.nio.file.Path"), new Type[]{Type.STRING}, Const.INVOKEINTERFACE));
+        il.append(_factory.createInvoke("java.nio.file.Files", "list", new ObjectType("java.util.stream.Stream"), new Type[]{new ObjectType("java.nio.file.Path")}, Const.INVOKESTATIC));
+        il.append(_factory.createStore(Type.OBJECT, 6));
+        il.append(InstructionConst.ACONST_NULL);
+        il.append(_factory.createStore(Type.OBJECT, 7));
+        InstructionHandle ih_120 = il.append(_factory.createLoad(Type.OBJECT, 6));
+        il.append(_factory.createInvoke("test", "test", new ObjectType("java.util.function.Predicate"), Type.NO_ARGS, Const.INVOKEDYNAMIC));
+        il.append(_factory.createInvoke("java.util.stream.Stream", "filter", new ObjectType("java.util.stream.Stream"), new Type[]{new ObjectType("java.util.function.Predicate")}, Const.INVOKEINTERFACE));
+        il.append(_factory.createLoad(Type.OBJECT, 5));
+        il.append(_factory.createInvoke("test", "test", new ObjectType("java.util.function.Predicate"), new Type[]{Type.STRING}, Const.INVOKEDYNAMIC));
+        il.append(_factory.createInvoke("java.util.stream.Stream", "filter", new ObjectType("java.util.stream.Stream"), new Type[]{new ObjectType("java.util.function.Predicate")}, Const.INVOKEINTERFACE));
+        il.append(_factory.createLoad(Type.OBJECT, 1));
+        il.append(_factory.createLoad(Type.OBJECT, 4));
+        il.append(_factory.createInvoke("accept", "accept", new ObjectType("java.util.function.Consumer"), new Type[]{new ObjectType("java.io.File"), new ObjectType("java.util.concurrent.atomic.AtomicReference")}, Const.INVOKEDYNAMIC));
+        InstructionHandle ih_152 = il.append(_factory.createInvoke("java.util.stream.Stream", "forEach", Type.VOID, new Type[]{new ObjectType("java.util.function.Consumer")}, Const.INVOKEINTERFACE));
+        il.append(_factory.createLoad(Type.OBJECT, 6));
+        BranchInstruction ifnull_159 = _factory.createBranchInstruction(Const.IFNULL, null);
+        il.append(ifnull_159);
+        il.append(_factory.createLoad(Type.OBJECT, 7));
+        BranchInstruction ifnull_164 = _factory.createBranchInstruction(Const.IFNULL, null);
+        il.append(ifnull_164);
+        InstructionHandle ih_167 = il.append(_factory.createLoad(Type.OBJECT, 6));
+        InstructionHandle ih_169 = il.append(_factory.createInvoke("java.util.stream.Stream", "close", Type.VOID, Type.NO_ARGS, Const.INVOKEINTERFACE));
+        BranchInstruction goto_174 = _factory.createBranchInstruction(Const.GOTO, null);
+        il.append(goto_174);
+        InstructionHandle ih_177 = il.append(_factory.createStore(Type.OBJECT, 8));
+        il.append(_factory.createLoad(Type.OBJECT, 7));
+        il.append(_factory.createLoad(Type.OBJECT, 8));
+        il.append(_factory.createInvoke("java.lang.Throwable", "addSuppressed", Type.VOID, new Type[]{new ObjectType("java.lang.Throwable")}, Const.INVOKEVIRTUAL));
+        BranchInstruction goto_186 = _factory.createBranchInstruction(Const.GOTO, null);
+        il.append(goto_186);
+        InstructionHandle ih_189 = il.append(_factory.createLoad(Type.OBJECT, 6));
+        il.append(_factory.createInvoke("java.util.stream.Stream", "close", Type.VOID, Type.NO_ARGS, Const.INVOKEINTERFACE));
+        BranchInstruction goto_196 = _factory.createBranchInstruction(Const.GOTO, null);
+        il.append(goto_196);
+        InstructionHandle ih_199 = il.append(_factory.createStore(Type.OBJECT, 8));
+        il.append(_factory.createLoad(Type.OBJECT, 8));
+        il.append(_factory.createStore(Type.OBJECT, 7));
+        il.append(_factory.createLoad(Type.OBJECT, 8));
+        il.append(InstructionConst.ATHROW);
+        InstructionHandle ih_208 = il.append(_factory.createStore(Type.OBJECT, 9));
+        il.append(_factory.createLoad(Type.OBJECT, 6));
+        BranchInstruction ifnull_212 = _factory.createBranchInstruction(Const.IFNULL, null);
+        il.append(ifnull_212);
+        il.append(_factory.createLoad(Type.OBJECT, 7));
+        BranchInstruction ifnull_217 = _factory.createBranchInstruction(Const.IFNULL, null);
+        il.append(ifnull_217);
+        InstructionHandle ih_220 = il.append(_factory.createLoad(Type.OBJECT, 6));
+        InstructionHandle ih_222 = il.append(_factory.createInvoke("java.util.stream.Stream", "close", Type.VOID, Type.NO_ARGS, Const.INVOKEINTERFACE));
+        BranchInstruction goto_227 = _factory.createBranchInstruction(Const.GOTO, null);
+        il.append(goto_227);
+        InstructionHandle ih_230 = il.append(_factory.createStore(Type.OBJECT, 10));
+        il.append(_factory.createLoad(Type.OBJECT, 7));
+        il.append(_factory.createLoad(Type.OBJECT, 10));
+        il.append(_factory.createInvoke("java.lang.Throwable", "addSuppressed", Type.VOID, new Type[]{new ObjectType("java.lang.Throwable")}, Const.INVOKEVIRTUAL));
+        BranchInstruction goto_239 = _factory.createBranchInstruction(Const.GOTO, null);
+        il.append(goto_239);
+        InstructionHandle ih_242 = il.append(_factory.createLoad(Type.OBJECT, 6));
+        il.append(_factory.createInvoke("java.util.stream.Stream", "close", Type.VOID, Type.NO_ARGS, Const.INVOKEINTERFACE));
+        InstructionHandle ih_249 = il.append(_factory.createLoad(Type.OBJECT, 9));
+        il.append(InstructionConst.ATHROW);
+        InstructionHandle ih_252 = il.append(_factory.createLoad(Type.OBJECT, 4));
+        il.append(_factory.createInvoke("java.util.concurrent.atomic.AtomicReference", "get", Type.OBJECT, Type.NO_ARGS, Const.INVOKEVIRTUAL));
+        il.append(_factory.createCheckCast(new ObjectType("java.io.IOException")));
+        il.append(_factory.createStore(Type.OBJECT, 6));
+        il.append(_factory.createLoad(Type.OBJECT, 6));
+        BranchInstruction ifnull_264 = _factory.createBranchInstruction(Const.IFNULL, null);
+        il.append(ifnull_264);
+        il.append(_factory.createLoad(Type.OBJECT, 6));
+        il.append(InstructionConst.ATHROW);
+        InstructionHandle ih_270 = il.append(_factory.createReturn(Type.VOID));
+        ifnull_3.setTarget(ih_13);
+        ifne_10.setTarget(ih_26);
+        if_icmpge_43.setTarget(ih_75);
+        ifeq_60.setTarget(ih_69);
+        goto_66.setTarget(ih_75);
+        ifnonnull_76.setTarget(ih_89);
+        ifnull_159.setTarget(ih_252);
+        ifnull_164.setTarget(ih_189);
+        goto_174.setTarget(ih_252);
+        goto_186.setTarget(ih_252);
+        goto_196.setTarget(ih_252);
+        ifnull_212.setTarget(ih_249);
+        ifnull_217.setTarget(ih_242);
+        goto_227.setTarget(ih_249);
+        goto_239.setTarget(ih_249);
+        ifnull_264.setTarget(ih_270);
+        method.addExceptionHandler(ih_167, ih_169, ih_177, new ObjectType("java.lang.Throwable"));
+        method.addExceptionHandler(ih_120, ih_152, ih_199, new ObjectType("java.lang.Throwable"));
+        method.addExceptionHandler(ih_120, ih_152, ih_208, null);
+        method.addExceptionHandler(ih_220, ih_222, ih_230, new ObjectType("java.lang.Throwable"));
+        method.addExceptionHandler(ih_199, ih_208, ih_208, null);
+
+        System.out.println("Trying to get fixed stackmap");
+        StackMap fixedMethodCodeAttribute = (StackMap) getFixedMethodCodeAttribute();
+
+//        System.out.println("= original stackmap constant pool =");
+//        System.out.println(fixedMethodCodeAttribute.getConstantPool().toString());
+        System.out.println("Trying to get copy of fixed stackmap with different constant pool");
+        StackMap stackmapTable = (StackMap) fixedMethodCodeAttribute.copy(constPoolGen.getConstantPool());
+        if( stackmapTable != null ){
+            Arrays.asList(stackmapTable.getStackMap()).stream().forEach(stackMapEntry -> {
+                // correct entries
+                stackMapEntry.setConstantPool(constPoolGen.getConstantPool());
+            });
+//            System.out.println("= modified stackmap constant pool =");
+//            System.out.println(stackmapTable.getConstantPool().toString());
+            System.out.println("replacing stackmaptable with fixed one");
+            method.removeCodeAttributes();
+
+            System.out.println("NameIndex after cloning > " + stackmapTable.getNameIndex());
+            stackmapTable.setConstantPool(constPoolGen.getConstantPool());
+            System.out.println("NameIndex after ConstantPool switch > " + stackmapTable.getNameIndex());
+            System.out.println("found place of stackmaptable > " + constPoolGen.lookupUtf8("StackMapTable"));
+            stackmapTable.setNameIndex(constPoolGen.lookupUtf8("StackMapTable"));
+            System.out.println("NameIndex after setting index manually > " + stackmapTable.getNameIndex());
+
+            System.out.println("adding stackmaptable");
+
+            method.addCodeAttribute(stackmapTable);
+        } else {
+            System.out.println("wasn't able to get fixed stackmaptable");
+        }
+
+        System.out.println("removing non-required stuff");
+        method.removeExceptionHandlers();
+        method.removeNOPs();
+        method.removeLineNumbers();
+
+//        method.setMaxStack(7);
+//        method.setMaxLocals(11);
+        method.update();
+
+        method.setMaxStack();
+        method.setMaxLocals();
+
+        method.update();
+
+        System.out.println("generate method");
+        return method.getMethod();
     }
 }
