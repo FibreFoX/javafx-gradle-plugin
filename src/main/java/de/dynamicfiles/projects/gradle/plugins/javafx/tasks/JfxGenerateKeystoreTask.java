@@ -118,6 +118,11 @@ public class JfxGenerateKeystoreTask extends JfxTask {
 
             ProcessBuilder pb = new ProcessBuilder().inheritIO().command(command);
             Process p = pb.start();
+
+            if( isGradleDaemonMode() ){
+                redirectIO(p, project.getLogger());
+            }
+
             p.waitFor();
         } catch(IOException | InterruptedException ex){
             throw new GradleException("There was an exception while generating keystore.", ex);

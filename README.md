@@ -144,4 +144,5 @@ Another note: I know, dependency-filtering is not yet implemented, but as this i
 
 upcoming Version 8.5.3 (???-2016)
 
-* nothing changed yet
+Bugfixes
+* fixed issue #29 regarding stdout/stderr not printed when Gradle is in daemon mode (which is default for Gradle 3 now)

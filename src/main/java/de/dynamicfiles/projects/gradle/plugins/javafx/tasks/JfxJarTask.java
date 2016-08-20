@@ -126,6 +126,11 @@ public class JfxJarTask extends JfxTask {
             manifestAttributes.put("Permissions", "all-permissions");
         }
 
+        // TODO
+        if( isGradleDaemonMode() ){
+            // redirectIO(p, project.getLogger());
+        }
+
         PackagerLib packagerLib = new PackagerLib();
         try{
             project.getLogger().info("Running packager...");

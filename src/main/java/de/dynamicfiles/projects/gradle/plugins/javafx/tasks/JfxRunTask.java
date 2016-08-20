@@ -53,6 +53,11 @@ public class JfxRunTask extends JfxTask {
                     .directory(new File(project.getProjectDir(), ext.getJfxAppOutputDir()))
                     .command(command);
             Process p = pb.start();
+
+            if( isGradleDaemonMode() ){
+                redirectIO(p, project.getLogger());
+            }
+
             p.waitFor();
             if( p.exitValue() != 0 ){
                 throw new GradleException("There was an exception while executing JavaFX Application. Please check build-log.");
@@ -61,5 +66,4 @@ public class JfxRunTask extends JfxTask {
             throw new GradleException("There was an exception while executing JavaFX Application.", ex);
         }
     }
-
 }

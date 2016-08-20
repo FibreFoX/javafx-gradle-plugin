@@ -316,6 +316,12 @@ public class JfxNativeTask extends JfxTask {
         final String cfgWorkaround205Marker = "cfgWorkaround205Marker";
         final String cfgWorkaround205DoneMarker = cfgWorkaround205Marker + ".done";
         boolean foundBundler = false;
+
+        // TODO
+        if( isGradleDaemonMode() ){
+            // redirectIO(p, project.getLogger());
+        }
+
         for( Bundler b : bundlers.getBundlers() ){
             boolean runBundler = true;
             if( bundler != null && !"ALL".equalsIgnoreCase(bundler) && !bundler.equalsIgnoreCase(b.getID()) ){
@@ -531,6 +537,7 @@ public class JfxNativeTask extends JfxTask {
         getJARFilesFromJNLPFiles(ext).forEach(jarFile -> signJarParams.addResource(nativeOutputDir, jarFile));
 
         project.getLogger().info("Signing JAR files for webstart bundle");
+
         try{
             new PackagerLib().signJar(signJarParams);
         } catch(PackagerException ex){
@@ -598,6 +605,7 @@ public class JfxNativeTask extends JfxTask {
         command.add(ext.getKeyPassword());
         command.add(jarFile.getAbsolutePath());
         command.add(ext.getKeyStoreAlias());
+
         if( ext.isVerbose() ){
             command.add("-verbose");
         }
