@@ -82,6 +82,7 @@ public class JavaFXGradlePluginExtension {
     private String certCountry = null;
 
     private boolean skipDaemonModeCheck = false;
+    private String alternativePathToJarFile = null;
 
     /*
         generated methods below
@@ -460,6 +461,14 @@ public class JavaFXGradlePluginExtension {
 
     public void setSkipDaemonModeCheck(boolean skipDaemonModeCheck) {
         this.skipDaemonModeCheck = skipDaemonModeCheck;
+    }
+
+    public String getAlternativePathToJarFile() {
+        return alternativePathToJarFile;
+    }
+
+    public void setAlternativePathToJarFile(String alternativePathToJarFile) {
+        this.alternativePathToJarFile = alternativePathToJarFile;
     }
 
 }

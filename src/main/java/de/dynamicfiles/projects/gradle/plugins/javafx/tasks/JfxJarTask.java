@@ -70,7 +70,17 @@ public class JfxJarTask extends JfxTask {
         project.getLogger().info("Extraction generated JAR-file ...");
         project.copy((CopySpec copySpec) -> {
             copySpec.into(someTempDir.toFile());
-            copySpec.from(project.zipTree(jarTask.getArchivePath()));
+            if( ext.getAlternativePathToJarFile() == null ){
+                copySpec.from(project.zipTree(jarTask.getArchivePath()));
+            } else {
+                File alternativeJarFile = new File(project.getProjectDir(), ext.getAlternativePathToJarFile());
+                if( alternativeJarFile.exists() ){
+                    copySpec.from(project.zipTree(alternativeJarFile));
+                } else {
+                    project.getLogger().warn("Could not find specified alternative JAR-file");
+                    copySpec.from(project.zipTree(jarTask.getArchivePath()));
+                }
+            }
         });
 
         project.getLogger().info("Creating parameter-map for packager...");
