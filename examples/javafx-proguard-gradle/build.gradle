@@ -8,7 +8,7 @@ buildscript {
     }
     dependencies {
         // provides javafx-gradle-plugin
-        classpath group: 'de.dynamicfiles.projects.gradle.plugins', name: 'javafx-gradle-plugin', version: "8.4.2-SNAPSHOT"
+        classpath group: 'de.dynamicfiles.projects.gradle.plugins', name: 'javafx-gradle-plugin', version: "8.5.3-SNAPSHOT"
         // provides proguard.gradle.ProGuardTask (including all requirements)
         classpath 'net.sf.proguard:proguard-gradle:5.2.1'
     }
@@ -43,6 +43,7 @@ jfx {
     bundleArguments = [
         runtime: null
     ]
+    alternativePathToJarFile 'build/libs/javafx-proguard-gradle.out.jar'
 }
 
 // for more details, see: http://proguard.sourceforge.net/manual/gradle.html
@@ -58,27 +59,5 @@ task myProguardTask(type: proguard.gradle.ProGuardTask) {
     outjars 'build/libs/javafx-proguard-gradle.out.jar'
 }
 
-// some moving-magic because we don't want the javafx-gradle-plugin catch the wrong jar-file
-
-// remove unguarded jar-file (proguard would complain about same filenames)
-task deleteUnguardedJarFile(type: Delete){
-    delete 'build/libs/javafx-proguard-gradle.jar'
-}
-
-// then copy obfruscated/guarded jar-file having the same name as the unguarded one,
-// this makes javafx-gradle-plugin catch the right file (because it's looking at the
-// output-filename of the jar-task)
-task swapGuardedJarFile(type: Copy){
-    from 'build/libs'
-    into 'build/libs'
-    
-    rename '(.*)\\.out\\.jar', '$1.jar'
-}
-
-// set order (proguard,delete,copy)
-swapGuardedJarFile.mustRunAfter myProguardTask
-swapGuardedJarFile.dependsOn deleteUnguardedJarFile
-
 // set task-dependencies
 jfxJar.dependsOn myProguardTask
-jfxJar.dependsOn swapGuardedJarFile
