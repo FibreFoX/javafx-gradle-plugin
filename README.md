@@ -146,3 +146,7 @@ upcoming Version 8.5.3 (???-2016)
 
 Bugfixes
 * fixed issue #29 regarding stdout/stderr not printed when Gradle is in daemon mode (which is default for Gradle 3 now)
+
+Enhancements
+* fixed issue #26 by providing a way to specify jar-file used for javapackager
+* updated proguard example using new `alternativePathToJarFile`-property
