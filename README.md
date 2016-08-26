@@ -51,6 +51,9 @@ dependencies{
 
 apply plugin: 'javafx-gradle-plugin'
 
+// these values are the examples and defaults
+// you won't need them all
+
 // configure javafx-gradle-plugin
 jfx {
     verbose = true
@@ -96,6 +99,10 @@ jfx {
     skipJNLPRessourcePathWorkaround182 = false
     skipSigningJarFilesJNLP185 = false
     skipSizeRecalculationForJNLP185 = false
+    // don't check for gradle-daemon mode, which makes it required to change some stuff internally
+    skipDaemonModeCheck = false
+    // per default the outcome of the gradle "jarTask" will be used, set this to specify otherwise (like proguard-output)
+    alternativePathToJarFile
     
     // gradle jfxGenerateKeyStore
     keyStore = "src/main/deploy/keystore.jks"
@@ -144,9 +151,13 @@ Another note: I know, dependency-filtering is not yet implemented, but as this i
 
 upcoming Version 8.5.3 (???-2016)
 
+New
+* added `alternativePathToJarFile`-property to specify the jar-file which gets used for javafx-jar-transformation
+
 Bugfixes
 * fixed issue #29 regarding stdout/stderr not printed when Gradle is in daemon mode (which is default for Gradle 3 now)
 
 Enhancements
 * fixed issue #26 by providing a way to specify jar-file used for javapackager
 * updated proguard example using new `alternativePathToJarFile`-property
+* updated README.md
