@@ -46,7 +46,10 @@ repositories {
 
 dependencies{
     // this dependency is only required when using UserJvmOptionsService
+    // when using Oracle JDK
     // compile files("${System.properties['java.home']}/../lib/packager.jar")
+    // when using OpenJFX (Ubuntu), please adjust accordingly
+    // compile files("/usr/share/java/openjfx/lib/packager.jar")
 }
 
 apply plugin: 'javafx-gradle-plugin'
