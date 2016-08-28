@@ -116,7 +116,11 @@ public class JfxGenerateKeystoreTask extends JfxTask {
                 command.add("-v");
             }
 
-            ProcessBuilder pb = new ProcessBuilder().inheritIO().command(command);
+            ProcessBuilder pb = new ProcessBuilder();
+            if( !isGradleDaemonMode() ){
+                pb.inheritIO();
+            }
+            pb.command(command);
             Process p = pb.start();
 
             if( isGradleDaemonMode() ){

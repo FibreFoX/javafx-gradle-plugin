@@ -611,11 +611,18 @@ public class JfxNativeTask extends JfxTask {
         }
 
         try{
-            ProcessBuilder pb = new ProcessBuilder()
-                    .inheritIO()
-                    .directory(project.getProjectDir())
+            ProcessBuilder pb = new ProcessBuilder();
+            if( !isGradleDaemonMode() ){
+                pb.inheritIO();
+            }
+            pb.directory(project.getProjectDir())
                     .command(command);
             Process p = pb.start();
+
+            if( isGradleDaemonMode() ){
+                redirectIO(p, project.getLogger());
+            }
+
             p.waitFor();
             if( p.exitValue() != 0 ){
                 throw new GradleException("Signing jar using jarsigner wasn't successful! Please check build-log.");
