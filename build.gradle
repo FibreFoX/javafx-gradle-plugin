@@ -29,8 +29,8 @@ repositories {
 dependencies {
     compile gradleApi()
     compile files("${System.properties['java.home']}/../lib/ant-javafx.jar")
-    compile 'org.apache.bcel:bcel:6.0'
-    runtime 'org.apache.bcel:bcel:6.0'
+    compile 'org.ow2.asm:asm-all:5.1'
+    runtime 'org.ow2.asm:asm-all:5.1'
 }
 
 group = 'de.dynamicfiles.projects.gradle.plugins'

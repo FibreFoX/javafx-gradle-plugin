@@ -277,15 +277,10 @@ public class JfxNativeTask extends JfxTask {
         // http://hg.openjdk.java.net/openjfx/8u40/rt/file/eb264cdc5828/modules/fxpackager/src/main/java/com/oracle/tools/packager/windows/WinAppBundler.java#l319
         // http://hg.openjdk.java.net/openjfx/8u60/rt/file/996511a322b7/modules/fxpackager/src/main/java/com/oracle/tools/packager/windows/WinAppBundler.java#l325
         // http://hg.openjdk.java.net/openjfx/9-dev/rt/file/7cae930f7a19/modules/fxpackager/src/main/java/com/oracle/tools/packager/windows/WinAppBundler.java#l374
-        if( isGradleDaemonMode() && !ext.isSkipDaemonModeCheck() && (JavaDetectionTools.IS_JAVA_9 || (JavaDetectionTools.IS_JAVA_8 && JavaDetectionTools.isAtLeastOracleJavaUpdateVersion(60))) ){
-            if( !params.containsKey("runtime") || params.get("runtime") != null ){
-                logger.lifecycle("Gradle is in daemon-mode, skipped executing bundler, because this would result in some error on clean-task. (JDK-8148717)");
-                logger.warn("Aborted jfxNative-task");
-                return;
-            }
-        }
+        //
+        // this got fixed by me inside monkey-patched javafx-ant jar
         if( ext.isSkipDaemonModeCheck() ){
-            logger.warn("Check for gradle daemon-mode was skipped, you might have some problems while bundling.");
+            logger.warn("Please remove 'skipDaemonModeCheck'-property, as the corresponding bug got 'worked around'.");
         }
 
         // run bundlers
@@ -316,11 +311,6 @@ public class JfxNativeTask extends JfxTask {
         final String cfgWorkaround205Marker = "cfgWorkaround205Marker";
         final String cfgWorkaround205DoneMarker = cfgWorkaround205Marker + ".done";
         boolean foundBundler = false;
-
-        // TODO
-        if( isGradleDaemonMode() ){
-            // redirectIO(p, project.getLogger());
-        }
 
         for( Bundler b : bundlers.getBundlers() ){
             boolean runBundler = true;

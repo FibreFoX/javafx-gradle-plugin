@@ -118,9 +118,11 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
             List<URL> antJarList = new ArrayList<>();
             // I'm very sorry for this ugly condition :(
             if( System.getProperty("os.name").toLowerCase().startsWith("windows") && isGradleDaemonMode() && (JavaDetectionTools.IS_JAVA_9 || (JavaDetectionTools.IS_JAVA_8 && JavaDetectionTools.isAtLeastOracleJavaUpdateVersion(60))) ){
-                antJarList.add(new MonkeyPatcher().getPatchedJfxAntJar());
+                URL patchedJfxAntJar = MonkeyPatcher.getPatchedJfxAntJar();
+                antJarList.add(patchedJfxAntJar);
                 // TODO check if already added!
                 org.gradle.internal.classloader.ClasspathUtil.addUrl(sysloader, antJarList);
+                project.getLogger().info("using PATCHED jar > " + patchedJfxAntJar.toExternalForm());
             } else {
                 antJarList.add(jfxAntJar.toURI().toURL());
                 // I really don't know, why there isn't a direct way to add some File... or just one URL,
