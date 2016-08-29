@@ -123,7 +123,9 @@ public class MonkeyPatcher {
                 if( !(name.equals(METHOD_TO_MONKEY_PATCH) && desc.equals(METHOD_SIGNATURE_TO_MONKEY_PATCH)) ){
                     return super.visitMethod(access, name, desc, signature, exceptions);
                 }
-                // ugly adapter-pattern
+                // helpful source: http://web.cs.ucla.edu/~msb/cs239-tutorial/
+                // "We will do this using the Adapter Pattern. Adapters wrap an object, overriding some of its methods, and delegating to the others."
+                // ugly adapter-pattern ... took me more time than I really can tell here <.<
                 return getMonkeyPatchedFileHandleLeakMethodVisitor(access, name, desc, signature, exceptions);
             }
 

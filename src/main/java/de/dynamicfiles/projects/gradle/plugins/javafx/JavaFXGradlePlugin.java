@@ -120,7 +120,7 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
             if( System.getProperty("os.name").toLowerCase().startsWith("windows") && isGradleDaemonMode() && (JavaDetectionTools.IS_JAVA_9 || (JavaDetectionTools.IS_JAVA_8 && JavaDetectionTools.isAtLeastOracleJavaUpdateVersion(60))) ){
                 URL patchedJfxAntJar = MonkeyPatcher.getPatchedJfxAntJar();
                 antJarList.add(patchedJfxAntJar);
-                // TODO check if already added!
+                // TODO check if already added! otherwise we patch that file multiple times :(
                 org.gradle.internal.classloader.ClasspathUtil.addUrl(sysloader, antJarList);
                 project.getLogger().info("using PATCHED jar > " + patchedJfxAntJar.toExternalForm());
             } else {
