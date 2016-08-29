@@ -102,10 +102,9 @@ jfx {
     skipJNLPRessourcePathWorkaround182 = false
     skipSigningJarFilesJNLP185 = false
     skipSizeRecalculationForJNLP185 = false
-    // don't check for gradle-daemon mode, which makes it required to change some stuff internally
-    skipDaemonModeCheck = false
+
     // per default the outcome of the gradle "jarTask" will be used, set this to specify otherwise (like proguard-output)
-    alternativePathToJarFile
+    alternativePathToJarFile = null // String
     
     // gradle jfxGenerateKeyStore
     keyStore = "src/main/deploy/keystore.jks"
