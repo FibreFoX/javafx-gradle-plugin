@@ -15,6 +15,7 @@
  */
 package de.dynamicfiles.projects.gradle.plugins.javafx.tasks.internal;
 
+import static de.dynamicfiles.projects.gradle.plugins.javafx.JavaFXGradlePlugin.ANT_JAVAFX_JAR_FILENAME;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -47,9 +48,16 @@ public class MonkeyPatcher {
     private static final String METHOD_TO_MONKEY_PATCH = "copyMSVCDLLs";
     private static final String METHOD_SIGNATURE_TO_MONKEY_PATCH = "(Ljava/io/File;Ljava/io/File;)V";
     private static final String FAULTY_CLASSFILE_TO_MONKEY_PATCH = "com/oracle/tools/packager/windows/WinAppBundler.class";
+    public static final String WORKAROUND_DIRECTORY_NAME = "javafx-gradle-plugin-workaround";
 
     public static URL getPatchedJfxAntJar() throws MalformedURLException {
-        String jfxAntJarPath = "/../lib/ant-javafx.jar";
+        String jfxAntJarPath = "/../lib/" + ANT_JAVAFX_JAR_FILENAME;
+
+        // on java 9, we have a different path
+        if( JavaDetectionTools.IS_JAVA_9 ){
+            jfxAntJarPath = "/lib/" + ANT_JAVAFX_JAR_FILENAME;
+        }
+
         File jfxAntJar = new File(System.getProperty("java.home") + jfxAntJarPath);
 
         if( !jfxAntJar.exists() ){
@@ -63,12 +71,12 @@ public class MonkeyPatcher {
         // write that generated class-file instead of original file to new jar-file
         // return path to that modified jar-file
         try{
-            Path tempDirectory = Files.createTempDirectory("javafx-gradle-plugin-workaround");
+            Path tempDirectory = Files.createTempDirectory(WORKAROUND_DIRECTORY_NAME);
             // delete that crap after JVM being shut down
             tempDirectory.toFile().deleteOnExit();
 
             JarFile jarFile = new JarFile(jfxAntJar, false, JarFile.OPEN_READ);
-            File targetManipulatedJarFile = tempDirectory.resolve("ant-javafx.jar").toAbsolutePath().toFile();
+            File targetManipulatedJarFile = tempDirectory.resolve(ANT_JAVAFX_JAR_FILENAME).toAbsolutePath().toFile();
             // delete that crap after JVM being shut down
             targetManipulatedJarFile.deleteOnExit();
 
