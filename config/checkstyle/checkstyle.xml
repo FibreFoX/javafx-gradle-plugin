@@ -24,7 +24,7 @@
     <module name="LocalFinalVariableName"/>
     <module name="LocalVariableName"/>
     <module name="MemberName"/>
-    <module name="MissingDeprecated"/>
+    <!-- <module name="MissingDeprecated"/> -->
     <module name="MissingOverride"/>
     <module name="ModifierOrder"/>
     <module name="NeedBraces"/>
