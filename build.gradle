@@ -57,6 +57,9 @@ task checkstyle(type: Checkstyle) {
     source 'src'
     include '**/*.java'
     classpath = files()
+
+    // don't throw up on checkstyle-warnings, just show them
+    ignoreFailures true
 }
 test {
     useTestNG()
