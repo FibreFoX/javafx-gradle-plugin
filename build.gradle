@@ -49,6 +49,15 @@ task sourcesJar(type: Jar) {
     from sourceSets.main.allSource
 }
 
+// http://stackoverflow.com/a/22991189/1961102
+compileJava.dependsOn 'checkstyle'
+task checkstyle(type: Checkstyle) {
+    configFile file("${project.rootDir}/config/checkstyle/checkstyle.xml")
+    configProperties.checkstyleConfigDir = file("${project.rootDir}/config/checkstyle")
+    source 'src'
+    include '**/*.java'
+    classpath = files()
+}
 test {
     useTestNG()
     testLogging.showStandardStreams = true
