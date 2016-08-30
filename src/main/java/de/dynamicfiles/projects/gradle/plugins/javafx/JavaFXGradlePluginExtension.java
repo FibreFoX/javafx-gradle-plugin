@@ -81,6 +81,7 @@ public class JavaFXGradlePluginExtension {
     private String certState = null;
     private String certCountry = null;
 
+    @Deprecated
     private boolean skipDaemonModeCheck = false;
     private String alternativePathToJarFile = null;
 
@@ -455,10 +456,12 @@ public class JavaFXGradlePluginExtension {
         this.certCountry = certCountry;
     }
 
+    @Deprecated
     public boolean isSkipDaemonModeCheck() {
         return skipDaemonModeCheck;
     }
 
+    @Deprecated
     public void setSkipDaemonModeCheck(boolean skipDaemonModeCheck) {
         this.skipDaemonModeCheck = skipDaemonModeCheck;
     }
