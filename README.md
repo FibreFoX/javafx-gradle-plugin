@@ -34,6 +34,7 @@ buildscript {
     }
     
     repositories {
+        mavenLocal()
         mavenCentral()
     }
 }
@@ -41,6 +42,7 @@ buildscript {
 apply plugin: 'java'
 
 repositories {
+    mavenLocal()
     mavenCentral()
 }
 
@@ -106,6 +108,9 @@ jfx {
     // per default the outcome of the gradle "jarTask" will be used, set this to specify otherwise (like proguard-output)
     alternativePathToJarFile = null // String
     
+    // to disable patching of ant-javafx.jar, set this to false
+    usePatchedJFXAntLib = true
+    
     // gradle jfxGenerateKeyStore
     keyStore = "src/main/deploy/keystore.jks"
     keyStoreAlias = "myalias"
@@ -123,6 +128,38 @@ jfx {
 ```
 
 
+Minimal setup of `build.gradle`
+======================
+```
+buildscript {
+    dependencies {
+        classpath group: 'de.dynamicfiles.projects.gradle.plugins', name: 'javafx-gradle-plugin', version: '8.5.2'
+    }
+    repositories {
+        mavenLocal()
+        mavenCentral()
+
+    }
+}
+apply plugin: 'java'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+apply plugin: 'javafx-gradle-plugin'
+
+
+jfx {
+    // minimal requirement for jfxJar-task
+    mainClass = 'full.qualified.nameOf.TheMainClass'
+    
+    // minimal requirement for jfxNative-task
+    vendor = 'YourName'
+}
+```
+
 Gradle Tasks
 ============
 
@@ -131,6 +168,30 @@ Gradle Tasks
 * `gradle jfxRun` - Create the JavaFX-jar and runs it like you would do using `java -jar my-project-jfx.jar`
 * `gradle jfxGenerateKeyStore` - Create a Java keystore
 
+
+Using `SNAPSHOT`-versions
+=========================
+When you report a bug and this got worked around, you might be able to have access to some -SNAPSHOT-version, please adjust your buildscript:
+
+```
+buildscript {
+    dependencies {
+        classpath group: 'de.dynamicfiles.projects.gradle.plugins', name: 'javafx-gradle-plugin', version: '8.6.0-SNAPSHOT'
+    }
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        maven { url "https://oss.sonatype.org/content/repositories/snapshots" }
+
+    }
+}
+```
+
+
+Examples
+========
+
+Please look at the [examples-folder](/examples) to see some projects in action.
 
 
 Last Release Notes
@@ -151,15 +212,21 @@ Another note: I know, dependency-filtering is not yet implemented, but as this i
 (Not yet) Release(d) Notes
 ==========================
 
-upcoming Version 8.5.3 (???-2016)
+upcoming Version 8.6.0 (??-Aug-2016)
 
 New
 * added `alternativePathToJarFile`-property to specify the jar-file which gets used for javafx-jar-transformation
+* added `usePatchedJFXAntLib`-property to disable gradle daemon workaround of the JDK-bug (which might be required when patching does result in crashing the JVM)
 
 Bugfixes
-* fixed issue #29 regarding stdout/stderr not printed when Gradle is in daemon mode (which is default for Gradle 3 now)
+* fixed issue #29 and #30 regarding stdout/stderr not printed when Gradle is in daemon mode (which is default for Gradle 3 now)
+* fixed issue #12 regarding gradle daemon mode: **IT IS NOW SUPPORTED**
+
+Changes
+* removed the usage of `skipDaemonModeCheck`-property, please remove this from your configuration/buildscript (will be removed in the next minor-release)
+* the javafx-gradle-plugin now requires ASM being present on classpath of the buildscript for being able to work around the JDK-bug (https://bugs.openjdk.java.net/browse/JDK-8148717)
 
 Enhancements
 * fixed issue #26 by providing a way to specify jar-file used for javapackager
 * updated proguard example using new `alternativePathToJarFile`-property
-* updated README.md
+* updated README.md to show minimal setup and other stuff
