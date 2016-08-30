@@ -52,6 +52,11 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
         // extend project-model to get our settings/configuration via nice configuration
         project.getExtensions().create("jfx", JavaFXGradlePluginExtension.class);
 
+        // can create jfx-jar only after jar-file was created (is this the right way?!?)
+        if( project.getTasks().findByName("jar") == null ){
+            throw new GradleException("Could not find jar-task. Please make sure you are applying the 'java'-plugin.");
+        }
+
         project.afterEvaluate(evaluatedProject -> {
             // ugly hack by adding ant-javafx-jar for only require to apply javafx-gradle-plugin
             // ... can't change via expected way: dependencies.add("classpath", jfxAntJar)
@@ -78,10 +83,6 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
             runTask.setGroup(taskGroupName);
             runTask.setDescription("Start generated JavaFX-jar");
 
-            // create jfx-jar only after jar-file was created (is this the right way?!?)
-            if( evaluatedProject.getTasks().findByName("jar") == null ){
-                throw new GradleException("Could not find jar-task. Please make sure you are applying the 'java'-plugin.");
-            }
             jarTask.dependsOn(evaluatedProject.getTasks().getByName("jar"));
 
             // always create jfx-jar before creating native launcher/bundle
