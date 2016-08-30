@@ -27,7 +27,6 @@ import com.sun.javafx.tools.packager.SignJarParams;
 import de.dynamicfiles.projects.gradle.plugins.javafx.JavaFXGradlePluginExtension;
 import de.dynamicfiles.projects.gradle.plugins.javafx.converter.FileAssociation;
 import de.dynamicfiles.projects.gradle.plugins.javafx.converter.NativeLauncher;
-import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.internal.JavaDetectionTools;
 import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.internal.Workarounds;
 import java.io.File;
 import java.io.IOException;
@@ -267,21 +266,7 @@ public class JfxNativeTask extends JfxTask {
             }
         }
 
-        // when running on "--daemon"-mode (which is the default while developing with gradle-supporting IDEs)
-        // and the runtime is not set to use "system-jre", there will be a problem when calling the clean-task
-        // because of some file descriptor leak which exists since 1.8.0_60
-        //
-        // for reference
-        // https://github.com/FibreFoX/javafx-gradle-plugin/issues/12
-        // https://bugs.openjdk.java.net/browse/JDK-8148717
-        // http://hg.openjdk.java.net/openjfx/8u40/rt/file/eb264cdc5828/modules/fxpackager/src/main/java/com/oracle/tools/packager/windows/WinAppBundler.java#l319
-        // http://hg.openjdk.java.net/openjfx/8u60/rt/file/996511a322b7/modules/fxpackager/src/main/java/com/oracle/tools/packager/windows/WinAppBundler.java#l325
-        // http://hg.openjdk.java.net/openjfx/9-dev/rt/file/7cae930f7a19/modules/fxpackager/src/main/java/com/oracle/tools/packager/windows/WinAppBundler.java#l374
-        //
-        // this got fixed by me inside monkey-patched javafx-ant jar
-        if( ext.isSkipDaemonModeCheck() ){
-            logger.warn("Please remove 'skipDaemonModeCheck'-property, as the corresponding bug got 'worked around'.");
-        }
+        checkAndWarnAboutDeprecatedSkipProperty(ext, logger);
 
         // run bundlers
         Bundlers bundlers = Bundlers.createBundlersInstance(); // service discovery?
@@ -420,6 +405,25 @@ public class JfxNativeTask extends JfxTask {
         }
         if( !foundBundler ){
             throw new GradleException("No bundler found for given name " + bundler + ". Please check your configuration.");
+        }
+    }
+
+    @SuppressWarnings("deprecation")
+    private void checkAndWarnAboutDeprecatedSkipProperty(JavaFXGradlePluginExtension ext, final Logger logger) {
+        // when running on "--daemon"-mode (which is the default while developing with gradle-supporting IDEs)
+        // and the runtime is not set to use "system-jre", there will be a problem when calling the clean-task
+        // because of some file descriptor leak which exists since 1.8.0_60
+        //
+        // for reference
+        // https://github.com/FibreFoX/javafx-gradle-plugin/issues/12
+        // https://bugs.openjdk.java.net/browse/JDK-8148717
+        // http://hg.openjdk.java.net/openjfx/8u40/rt/file/eb264cdc5828/modules/fxpackager/src/main/java/com/oracle/tools/packager/windows/WinAppBundler.java#l319
+        // http://hg.openjdk.java.net/openjfx/8u60/rt/file/996511a322b7/modules/fxpackager/src/main/java/com/oracle/tools/packager/windows/WinAppBundler.java#l325
+        // http://hg.openjdk.java.net/openjfx/9-dev/rt/file/7cae930f7a19/modules/fxpackager/src/main/java/com/oracle/tools/packager/windows/WinAppBundler.java#l374
+        //
+        // this got fixed by me inside monkey-patched javafx-ant jar
+        if( ext.isSkipDaemonModeCheck() ){
+            logger.warn("Please remove 'skipDaemonModeCheck'-property, as the corresponding bug got 'worked around'.");
         }
     }
 
