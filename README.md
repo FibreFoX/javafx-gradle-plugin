@@ -130,7 +130,7 @@ jfx {
 
 Minimal setup of `build.gradle`
 ======================
-```
+```groovy
 buildscript {
     dependencies {
         classpath group: 'de.dynamicfiles.projects.gradle.plugins', name: 'javafx-gradle-plugin', version: '8.5.2'
@@ -173,7 +173,7 @@ Using `SNAPSHOT`-versions
 =========================
 When you report a bug and this got worked around, you might be able to have access to some -SNAPSHOT-version, please adjust your buildscript:
 
-```
+```groovy
 buildscript {
     dependencies {
         classpath group: 'de.dynamicfiles.projects.gradle.plugins', name: 'javafx-gradle-plugin', version: '8.6.0-SNAPSHOT'
