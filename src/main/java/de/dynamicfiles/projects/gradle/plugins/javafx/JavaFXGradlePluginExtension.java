@@ -84,6 +84,7 @@ public class JavaFXGradlePluginExtension {
     @Deprecated
     private boolean skipDaemonModeCheck = false;
     private String alternativePathToJarFile = null;
+    private boolean usePatchedJFXAntLib = true;
 
     /*
         generated methods below
@@ -472,6 +473,14 @@ public class JavaFXGradlePluginExtension {
 
     public void setAlternativePathToJarFile(String alternativePathToJarFile) {
         this.alternativePathToJarFile = alternativePathToJarFile;
+    }
+
+    public boolean isUsePatchedJFXAntLib() {
+        return usePatchedJFXAntLib;
+    }
+
+    public void setUsePatchedJFXAntLib(boolean usePatchedJFXAntLib) {
+        this.usePatchedJFXAntLib = usePatchedJFXAntLib;
     }
 
 }
