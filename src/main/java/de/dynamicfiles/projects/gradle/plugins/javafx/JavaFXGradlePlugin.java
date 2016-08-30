@@ -27,6 +27,7 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.gradle.api.GradleException;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
@@ -41,47 +42,55 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
 
     @Override
     public void apply(Project project) {
-        // ugly hack by adding ant-javafx-jar for only require to apply javafx-gradle-plugin
-        // ... can't change via expected way: dependencies.add("classpath", jfxAntJar)
-        // https://discuss.gradle.org/t/how-to-bootstrapp-buildscript-classpath-cannot-change-configuration-classpath-after-it-has-been-resolved/7442
-        addJavaFXAntJARToGradleBuildpath(project);
-
         // gradle is lame, so replace existing tasks with MY NAMES ! *battle-cry*
-        JfxJarTask jarTask = project.getTasks().replace("jfxJar", JfxJarTask.class);
-        JfxNativeTask nativeTask = project.getTasks().replace("jfxNative", JfxNativeTask.class);
-        JfxGenerateKeystoreTask generateKeystoreTask = project.getTasks().replace("jfxGenerateKeyStore", JfxGenerateKeystoreTask.class);
-        JfxRunTask runTask = project.getTasks().replace("jfxRun", JfxRunTask.class);
-
-        String taskGroupName = "JavaFX";
-
-        // this is for description
-        jarTask.setGroup(taskGroupName);
-        jarTask.setDescription("Create executable JavaFX-jar");
-
-        nativeTask.setGroup(taskGroupName);
-        nativeTask.setDescription("Create native JavaFX-bundle");
-
-        generateKeystoreTask.setGroup(taskGroupName);
-        generateKeystoreTask.setDescription("Create a Java keystore");
-
-        runTask.setGroup(taskGroupName);
-        runTask.setDescription("Start generated JavaFX-jar");
-
-        // create jfx-jar only after jar-file was created (is this the right way?!?)
-        if( project.getTasks().findByName("jar") == null ){
-            throw new GradleException("Could not find jar-task. Please make sure you are applying the 'java'-plugin.");
-        }
-        jarTask.dependsOn(project.getTasks().getByName("jar"));
-
-        // always create jfx-jar before creating native launcher/bundle
-        // (in maven I had to implement a lifecycle for this ... mehhh)
-        nativeTask.dependsOn(jarTask);
-
-        // to run our jfx-jar, we have to create it first ;)
-        runTask.dependsOn(jarTask);
+        // will be replaced by real classes later (after evaluation)
+        project.getTasks().replace("jfxJar");
+        project.getTasks().replace("jfxNative");
+        project.getTasks().replace("jfxGenerateKeyStore");
+        project.getTasks().replace("jfxRun");
 
         // extend project-model to get our settings/configuration via nice configuration
         project.getExtensions().create("jfx", JavaFXGradlePluginExtension.class);
+
+        project.afterEvaluate(evaluatedProject -> {
+            // ugly hack by adding ant-javafx-jar for only require to apply javafx-gradle-plugin
+            // ... can't change via expected way: dependencies.add("classpath", jfxAntJar)
+            // https://discuss.gradle.org/t/how-to-bootstrapp-buildscript-classpath-cannot-change-configuration-classpath-after-it-has-been-resolved/7442
+            addJavaFXAntJARToGradleBuildpath(evaluatedProject);
+
+            JfxJarTask jarTask = evaluatedProject.getTasks().replace("jfxJar", JfxJarTask.class);
+            JfxNativeTask nativeTask = evaluatedProject.getTasks().replace("jfxNative", JfxNativeTask.class);
+            JfxGenerateKeystoreTask generateKeystoreTask = evaluatedProject.getTasks().replace("jfxGenerateKeyStore", JfxGenerateKeystoreTask.class);
+            JfxRunTask runTask = evaluatedProject.getTasks().replace("jfxRun", JfxRunTask.class);
+
+            String taskGroupName = "JavaFX";
+
+            // this is for description
+            jarTask.setGroup(taskGroupName);
+            jarTask.setDescription("Create executable JavaFX-jar");
+
+            nativeTask.setGroup(taskGroupName);
+            nativeTask.setDescription("Create native JavaFX-bundle");
+
+            generateKeystoreTask.setGroup(taskGroupName);
+            generateKeystoreTask.setDescription("Create a Java keystore");
+
+            runTask.setGroup(taskGroupName);
+            runTask.setDescription("Start generated JavaFX-jar");
+
+            // create jfx-jar only after jar-file was created (is this the right way?!?)
+            if( evaluatedProject.getTasks().findByName("jar") == null ){
+                throw new GradleException("Could not find jar-task. Please make sure you are applying the 'java'-plugin.");
+            }
+            jarTask.dependsOn(evaluatedProject.getTasks().getByName("jar"));
+
+            // always create jfx-jar before creating native launcher/bundle
+            // (in maven I had to implement a lifecycle for this ... mehhh)
+            nativeTask.dependsOn(jarTask);
+
+            // to run our jfx-jar, we have to create it first ;)
+            runTask.dependsOn(jarTask);
+        });
     }
 
     private void addJavaFXAntJARToGradleBuildpath(Project project) {
@@ -115,19 +124,39 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
 
         // add ant-javafx.jar to the classloader (using a different way as javafx-maven-plugin ;D)
         try{
-            List<URL> antJarList = new ArrayList<>();
             // I'm very sorry for this ugly condition :(
-            if( System.getProperty("os.name").toLowerCase().startsWith("windows") && isGradleDaemonMode() && (JavaDetectionTools.IS_JAVA_9 || (JavaDetectionTools.IS_JAVA_8 && JavaDetectionTools.isAtLeastOracleJavaUpdateVersion(60))) ){
-                URL patchedJfxAntJar = MonkeyPatcher.getPatchedJfxAntJar();
-                antJarList.add(patchedJfxAntJar);
-                // TODO check if already added! otherwise we patch that file multiple times :(
-                org.gradle.internal.classloader.ClasspathUtil.addUrl(sysloader, antJarList);
-                project.getLogger().info("using PATCHED jar > " + patchedJfxAntJar.toExternalForm());
-            } else {
-                antJarList.add(jfxAntJar.toURI().toURL());
+            boolean usePatchedJar = System.getProperty("os.name").toLowerCase().startsWith("windows") && isGradleDaemonMode() && (JavaDetectionTools.IS_JAVA_9 || (JavaDetectionTools.IS_JAVA_8 && JavaDetectionTools.isAtLeastOracleJavaUpdateVersion(60)));
+            boolean usePatchedJFXAntLib = project.getExtensions().getByType(JavaFXGradlePluginExtension.class).isUsePatchedJFXAntLib();
+
+            // check if patched jar is required
+            if( usePatchedJar && !usePatchedJFXAntLib ){
+                usePatchedJar = false;
+                project.getLogger().warn("You disabled the patching (by setting 'usePatchedJFXAntLib'-property to 'false' inside 'jfx'-configuration) of the " + ANT_JAVAFX_JAR_FILENAME + ", please make sure you know about the consequences.");
+            }
+
+            // check if already added! otherwise we would include/patch that file multiple times :(
+            List<URL> loadedAntJavaFXLibs = org.gradle.internal.classloader.ClasspathUtil.getClasspath(sysloader).stream().filter(loadedURL -> {
+                return loadedURL.toExternalForm().endsWith(ANT_JAVAFX_JAR_FILENAME);
+            }).collect(Collectors.toList());
+
+            boolean alreadyLoaded = loadedAntJavaFXLibs.size() > 0;
+            boolean workaroundLoaded = loadedAntJavaFXLibs.stream().filter(libURL -> libURL.toExternalForm().contains(MonkeyPatcher.WORKAROUND_DIRECTORY_NAME)).count() > 0;
+
+            // only when not loaded
+            if( alreadyLoaded == false ){
+                List<URL> antJarList = new ArrayList<>();
+                if( usePatchedJar ){
+                    URL patchedJfxAntJar = MonkeyPatcher.getPatchedJfxAntJar();
+                    antJarList.add(patchedJfxAntJar);
+                    project.getLogger().info("using patched " + ANT_JAVAFX_JAR_FILENAME + ", located at > " + patchedJfxAntJar.toExternalForm());
+                } else {
+                    antJarList.add(jfxAntJar.toURI().toURL());
+                }
                 // I really don't know, why there isn't a direct way to add some File... or just one URL,
                 // but: no need to check if jar already was added ;) it's done inside
                 org.gradle.internal.classloader.ClasspathUtil.addUrl(sysloader, antJarList);
+            } else if( !usePatchedJFXAntLib && workaroundLoaded ){
+                project.getLogger().warn("Please restart gradle-daemon! Patched " + ANT_JAVAFX_JAR_FILENAME + " is loaded, but you disabled to patch and use that file.");
             }
         } catch(MalformedURLException ex){
             throw new GradleException("Could not add Ant-JavaFX-JAR to plugin-classloader", ex);
