@@ -87,7 +87,7 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
             runTask.setDescription("Start generated JavaFX-jar");
 
             jfxListBundlersTask.setGroup(taskGroupName);
-            jfxListBundlersTask.setDescription("List all possible bundlers available on this system");
+            jfxListBundlersTask.setDescription("List all possible bundlers available on this system, use '--info' parameter for detailed information");
 
             jarTask.dependsOn(evaluatedProject.getTasks().getByName("jar"));
 

@@ -30,7 +30,7 @@ Please adjust your parameters accordingly:
 ```groovy
 buildscript {
     dependencies {
-        classpath group: 'de.dynamicfiles.projects.gradle.plugins', name: 'javafx-gradle-plugin', version: '8.5.2'
+        classpath group: 'de.dynamicfiles.projects.gradle.plugins', name: 'javafx-gradle-plugin', version: '8.6.0'
     }
     
     repositories {
@@ -138,7 +138,7 @@ Minimal setup of `build.gradle`
 ```groovy
 buildscript {
     dependencies {
-        classpath group: 'de.dynamicfiles.projects.gradle.plugins', name: 'javafx-gradle-plugin', version: '8.5.2'
+        classpath group: 'de.dynamicfiles.projects.gradle.plugins', name: 'javafx-gradle-plugin', version: '8.6.0'
     }
     repositories {
         mavenLocal()
@@ -170,8 +170,9 @@ Gradle Tasks
 
 * `gradle jfxJar` - Create executable JavaFX-jar
 * `gradle jfxNative` - Create native JavaFX-bundle (will run `jfxJar` first)
-* `gradle jfxRun` - Create the JavaFX-jar and runs it like you would do using `java -jar my-project-jfx.jar`
+* `gradle jfxRun` - Create the JavaFX-jar and runs it like you would do using `java -jar my-project-jfx.jar`, adjustable using `runJavaParameter`/`runJavaParameter`-parameter
 * `gradle jfxGenerateKeyStore` - Create a Java keystore
+* `gradle jfxListBundlers` - List all possible bundlers available on this system, use '--info' parameter for detailed information
 
 
 Using `SNAPSHOT`-versions
@@ -217,7 +218,7 @@ Another note: I know, dependency-filtering is not yet implemented, but as this i
 (Not yet) Release(d) Notes
 ==========================
 
-upcoming Version 8.6.0 (??-Aug-2016)
+upcoming Version 8.6.0 (31-Aug-2016)
 
 New
 * added `alternativePathToJarFile`-property to specify the jar-file which gets used for javafx-jar-transformation
