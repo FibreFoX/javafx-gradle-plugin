@@ -591,7 +591,7 @@ public class JfxNativeTask extends JfxTask {
         Project project = this.getProject();
         File keyStore = new File(project.getProjectDir(), ext.getKeyStore());
         List<String> command = new ArrayList<>();
-        command.add("jarsigner");
+        command.add(getEnvironmentRelativeExecutablePath(ext.isUseEnvironmentRelativeExecutables()) + "jarsigner");
         command.add("-strict");
         command.add("-keystore");
         command.add(keyStore.getAbsolutePath());
@@ -611,6 +611,11 @@ public class JfxNativeTask extends JfxTask {
             if( !isGradleDaemonMode() ){
                 pb.inheritIO();
             }
+
+            if( ext.isVerbose() ){
+                project.getLogger().lifecycle("Running command: " + String.join(" ", command));
+            }
+
             pb.directory(project.getProjectDir())
                     .command(command);
             Process p = pb.start();

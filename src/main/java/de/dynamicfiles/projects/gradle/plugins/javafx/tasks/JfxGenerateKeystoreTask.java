@@ -80,11 +80,11 @@ public class JfxGenerateKeystoreTask extends JfxTask {
         checkAndAddRequiredField(distinguishedNameParts, "certCountry", ext.getCertCountry(), "c");
 
         generateKeyStore(
-                keyStore, ext.getKeyStoreAlias(), ext.getKeyStorePassword(), ext.getKeyPassword(), String.join(", ", distinguishedNameParts), ext.isVerbose()
+                keyStore, ext.getKeyStoreAlias(), ext.getKeyStorePassword(), ext.getKeyPassword(), String.join(", ", distinguishedNameParts), ext.isVerbose(), ext.isUseEnvironmentRelativeExecutables()
         );
     }
 
-    protected void generateKeyStore(File keyStore, String keyStoreAlias, String keyStorePassword, String keyPassword, String distinguishedName, boolean verbose) {
+    protected void generateKeyStore(File keyStore, String keyStoreAlias, String keyStorePassword, String keyPassword, String distinguishedName, boolean verbose, boolean useEnvironmentRelativeExecutables) {
         Project project = this.getProject();
         project.getLogger().info("Generating keystore in: " + keyStore);
 
@@ -94,7 +94,7 @@ public class JfxGenerateKeystoreTask extends JfxTask {
 
             List<String> command = new ArrayList<>();
 
-            command.add("keytool");
+            command.add(getEnvironmentRelativeExecutablePath(useEnvironmentRelativeExecutables) + "keytool");
             command.add("-genkeypair");
             command.add("-keystore");
             command.add(keyStore.getPath());
@@ -122,6 +122,11 @@ public class JfxGenerateKeystoreTask extends JfxTask {
             if( !isGradleDaemonMode() ){
                 pb.inheritIO();
             }
+
+            if( verbose ){
+                project.getLogger().lifecycle("Running command: " + String.join(" ", command));
+            }
+
             pb.command(command);
             Process p = pb.start();
 

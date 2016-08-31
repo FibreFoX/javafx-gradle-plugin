@@ -67,6 +67,11 @@ public class JfxRunTask extends JfxTask {
             if( !isGradleDaemonMode() ){
                 pb.inheritIO();
             }
+
+            if( ext.isVerbose() ){
+                project.getLogger().lifecycle("Running command: " + String.join(" ", command));
+            }
+
             pb.directory(new File(project.getProjectDir(), ext.getJfxAppOutputDir()))
                     .command(command);
             Process p = pb.start();
