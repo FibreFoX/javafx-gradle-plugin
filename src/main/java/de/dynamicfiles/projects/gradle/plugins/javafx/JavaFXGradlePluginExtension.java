@@ -30,6 +30,7 @@ public class JavaFXGradlePluginExtension {
     private String jfxAppOutputDir = "build/jfx/app";
     private String jfxMainAppJarName = "project-jfx.jar";
     private String deployDir = "src/main/deploy";
+    private boolean useEnvironmentRelativeExecutables = true;
 
     // JarMojo
     private boolean css2bin = false;
@@ -81,6 +82,11 @@ public class JavaFXGradlePluginExtension {
     private String certState = null;
     private String certCountry = null;
 
+    // RunMojo
+    private String runJavaParameter = null;
+    private String runAppParameter = null;
+
+    // generic settings (not present on javafx-maven-plugin)
     @Deprecated
     private boolean skipDaemonModeCheck = false;
     private String alternativePathToJarFile = null;
@@ -127,6 +133,14 @@ public class JavaFXGradlePluginExtension {
 
     public void setDeployDir(String deployDir) {
         this.deployDir = deployDir;
+    }
+
+    public boolean isUseEnvironmentRelativeExecutables() {
+        return useEnvironmentRelativeExecutables;
+    }
+
+    public void setUseEnvironmentRelativeExecutables(boolean useEnvironmentRelativeExecutables) {
+        this.useEnvironmentRelativeExecutables = useEnvironmentRelativeExecutables;
     }
 
     public boolean isCss2bin() {
@@ -455,6 +469,22 @@ public class JavaFXGradlePluginExtension {
 
     public void setCertCountry(String certCountry) {
         this.certCountry = certCountry;
+    }
+
+    public String getRunJavaParameter() {
+        return runJavaParameter;
+    }
+
+    public void setRunJavaParameter(String runJavaParameter) {
+        this.runJavaParameter = runJavaParameter;
+    }
+
+    public String getRunAppParameter() {
+        return runAppParameter;
+    }
+
+    public void setRunAppParameter(String runAppParameter) {
+        this.runAppParameter = runAppParameter;
     }
 
     @Deprecated
