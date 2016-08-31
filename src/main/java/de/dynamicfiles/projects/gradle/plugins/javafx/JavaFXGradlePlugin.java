@@ -108,6 +108,8 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
             jfxAntJarPath = "/lib/" + ANT_JAVAFX_JAR_FILENAME;
         }
 
+        // always use ant-javafx.jar from the executing JDK (do not use environment-specific paths)
+        // per spec "java.home" points to the JRE: https://docs.oracle.com/javase/tutorial/essential/environment/sysprop.html
         File jfxAntJar = new File(System.getProperty("java.home") + jfxAntJarPath);
 
         if( !jfxAntJar.exists() ){

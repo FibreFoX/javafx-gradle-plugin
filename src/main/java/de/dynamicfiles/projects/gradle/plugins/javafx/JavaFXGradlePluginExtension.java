@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * Contains all settings used inside "jfx"-configuration block inside your build-script
  *
  * @author Danny Althoff
  */
