@@ -203,39 +203,33 @@ Please look at the [examples-folder](/examples) to see some projects in action.
 Last Release Notes
 ==================
 
-**Version 8.5.2 (31-July-2016)**
+**Version 8.6.0 (31-August-2016)**
 
-Bugfixes:
-* fixed issue #24 regarding NullPointerException inside workaround (I'm very sorry about that, thanks to @AustinShalit for finding this)
-
-**Note:**
-There won't be any [GString](http://docs.groovy-lang.org/latest/html/api/groovy/lang/GString.html)-support, please use `toString()` inside your buildscript
-
-Another note: I know, dependency-filtering is not yet implemented, but as this is a rather unused feature, I will take the time ;)
-
-
-
-(Not yet) Release(d) Notes
-==========================
-
-upcoming Version 8.6.0 (31-Aug-2016)
-
-New
+New:
 * added `alternativePathToJarFile`-property to specify the jar-file which gets used for javafx-jar-transformation
 * added `usePatchedJFXAntLib`-property to disable gradle daemon workaround of the JDK-bug (which might be required when patching does result in crashing the JVM)
 * added `useEnvironmentRelativeExecutables`-property to change the executables being used from the JDK instead of environment-relative (which could differ due to multiple local java-installations)
 * added possibility to adjust java-command used for `jfxRun`-task: it is now possible to pass parameters to your jfx-application
 * added possibility to adjust java-command used for `jfxRun`-task: it is now possible to pass parameters to the java-executable, e.g. to specify some javassist-module or other JVM-related stuff (like Xmx or other funny things)
 
-Bugfixes
+Bugfixes:
 * fixed issue #29 and #30 regarding stdout/stderr not printed when Gradle is in daemon mode (which is default for Gradle 3 now)
 * fixed issue #12 regarding gradle daemon mode: **IT IS NOW SUPPORTED**
 
-Changes
+Changes:
 * removed the usage of `skipDaemonModeCheck`-property, please remove this from your configuration/buildscript (will be removed in the next minor-release)
 * the javafx-gradle-plugin now requires ASM being present on classpath of the buildscript for being able to work around the JDK-bug (https://bugs.openjdk.java.net/browse/JDK-8148717)
 
-Enhancements
+Enhancements:
 * fixed issue #26 by providing a way to specify jar-file used for javapackager
 * updated proguard example using new `alternativePathToJarFile`-property
 * updated README.md to show minimal setup and other stuff
+
+
+
+(Not yet) Release(d) Notes
+==========================
+
+upcoming Version 8.6.1 (??-2016)
+
+* nothing changed yet
