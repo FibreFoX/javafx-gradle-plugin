@@ -42,7 +42,8 @@ public abstract class JfxTask extends DefaultTask {
 
             File targetDeployDir = new File(project.getProjectDir(), deployDir);
             if( !targetDeployDir.exists() ){
-                project.getLogger().info("Adding 'deploy' directory wasn't successful, because it does not exist! (" + targetDeployDir.getAbsolutePath() + ")");
+                project.getLogger().info("Adding 'deploy' directory wasn't successful, because it does not exist! (" + targetDeployDir.getAbsolutePath() + ").");
+                project.getLogger().info("You only need this directory when you want to override some resources.");
                 return;
             }
             project.getLogger().info("Adding 'deploy' directory to classpath: " + deployDir);
@@ -89,5 +90,16 @@ public abstract class JfxTask extends DefaultTask {
         public void run() {
             new BufferedReader(new InputStreamReader(inputStream)).lines().forEach(consumeInputLine);
         }
+    }
+
+    protected String getEnvironmentRelativeExecutablePath(boolean useEnvironmentRelativeExecutables) {
+        if( useEnvironmentRelativeExecutables ){
+            return "";
+        }
+
+        String jrePath = System.getProperty("java.home");
+        String jdkPath = jrePath + File.separator + ".." + File.separator + "bin" + File.separator;
+
+        return jdkPath;
     }
 }
