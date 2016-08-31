@@ -18,6 +18,7 @@ package de.dynamicfiles.projects.gradle.plugins.javafx;
 import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.JfxGenerateKeystoreTask;
 import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.JfxNativeTask;
 import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.JfxJarTask;
+import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.JfxListBundlersTask;
 import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.JfxRunTask;
 import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.internal.JavaDetectionTools;
 import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.internal.MonkeyPatcher;
@@ -44,10 +45,11 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
     public void apply(Project project) {
         // gradle is lame, so replace existing tasks with MY NAMES ! *battle-cry*
         // will be replaced by real classes later (after evaluation)
-        project.getTasks().replace("jfxJar");
-        project.getTasks().replace("jfxNative");
-        project.getTasks().replace("jfxGenerateKeyStore");
-        project.getTasks().replace("jfxRun");
+        project.getTasks().replace(JfxJarTask.JFX_TASK_NAME);
+        project.getTasks().replace(JfxNativeTask.JFX_TASK_NAME);
+        project.getTasks().replace(JfxGenerateKeystoreTask.JFX_TASK_NAME);
+        project.getTasks().replace(JfxRunTask.JFX_TASK_NAME);
+        project.getTasks().replace(JfxListBundlersTask.JFX_TASK_NAME);
 
         // extend project-model to get our settings/configuration via nice configuration
         project.getExtensions().create("jfx", JavaFXGradlePluginExtension.class);
@@ -63,10 +65,11 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
             // https://discuss.gradle.org/t/how-to-bootstrapp-buildscript-classpath-cannot-change-configuration-classpath-after-it-has-been-resolved/7442
             addJavaFXAntJARToGradleBuildpath(evaluatedProject);
 
-            JfxJarTask jarTask = evaluatedProject.getTasks().replace("jfxJar", JfxJarTask.class);
-            JfxNativeTask nativeTask = evaluatedProject.getTasks().replace("jfxNative", JfxNativeTask.class);
-            JfxGenerateKeystoreTask generateKeystoreTask = evaluatedProject.getTasks().replace("jfxGenerateKeyStore", JfxGenerateKeystoreTask.class);
-            JfxRunTask runTask = evaluatedProject.getTasks().replace("jfxRun", JfxRunTask.class);
+            JfxJarTask jarTask = evaluatedProject.getTasks().replace(JfxJarTask.JFX_TASK_NAME, JfxJarTask.class);
+            JfxNativeTask nativeTask = evaluatedProject.getTasks().replace(JfxNativeTask.JFX_TASK_NAME, JfxNativeTask.class);
+            JfxGenerateKeystoreTask generateKeystoreTask = evaluatedProject.getTasks().replace(JfxGenerateKeystoreTask.JFX_TASK_NAME, JfxGenerateKeystoreTask.class);
+            JfxRunTask runTask = evaluatedProject.getTasks().replace(JfxRunTask.JFX_TASK_NAME, JfxRunTask.class);
+            JfxListBundlersTask jfxListBundlersTask = evaluatedProject.getTasks().replace(JfxListBundlersTask.JFX_TASK_NAME, JfxListBundlersTask.class);
 
             String taskGroupName = "JavaFX";
 
@@ -82,6 +85,9 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
 
             runTask.setGroup(taskGroupName);
             runTask.setDescription("Start generated JavaFX-jar");
+
+            jfxListBundlersTask.setGroup(taskGroupName);
+            jfxListBundlersTask.setDescription("List all possible bundlers available on this system");
 
             jarTask.dependsOn(evaluatedProject.getTasks().getByName("jar"));
 

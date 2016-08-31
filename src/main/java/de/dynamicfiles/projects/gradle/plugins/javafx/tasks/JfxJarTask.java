@@ -45,6 +45,8 @@ import org.gradle.api.tasks.TaskAction;
  */
 public class JfxJarTask extends JfxTask {
 
+    public static final String JFX_TASK_NAME = "jfxJar";
+
     @TaskAction
     public void jfxjar() {
         Project project = this.getProject();

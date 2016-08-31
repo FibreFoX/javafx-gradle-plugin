@@ -59,6 +59,8 @@ import org.gradle.api.tasks.TaskAction;
  */
 public class JfxNativeTask extends JfxTask {
 
+    public static final String JFX_TASK_NAME = "jfxNative";
+
     private static final String JNLP_JAR_PATTERN = "(.*)href=(\".*?\")(.*)size=(\".*?\")(.*)";
 
     private Workarounds workarounds = null;

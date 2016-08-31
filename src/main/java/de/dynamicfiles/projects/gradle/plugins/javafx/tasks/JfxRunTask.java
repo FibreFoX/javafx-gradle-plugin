@@ -32,6 +32,8 @@ import org.gradle.api.tasks.TaskAction;
  */
 public class JfxRunTask extends JfxTask {
 
+    public static final String JFX_TASK_NAME = "jfxRun";
+
     @TaskAction
     public void jfxrun() {
         Project project = this.getProject();

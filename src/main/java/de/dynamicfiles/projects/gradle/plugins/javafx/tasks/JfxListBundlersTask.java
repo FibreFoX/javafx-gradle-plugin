@@ -24,6 +24,8 @@ import org.gradle.api.tasks.TaskAction;
  */
 public class JfxListBundlersTask extends JfxTask {
 
+    public static final String JFX_TASK_NAME = "jfxListBundlers";
+
     @TaskAction
     public void jfxlistbundlers() {
         Project project = this.getProject();

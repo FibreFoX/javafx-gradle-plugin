@@ -32,6 +32,8 @@ import org.gradle.api.tasks.TaskAction;
  */
 public class JfxGenerateKeystoreTask extends JfxTask {
 
+    public static final String JFX_TASK_NAME = "jfxGenerateKeyStore";
+
     @FunctionalInterface
     private interface RequiredFieldAlternativeCallback {
 
