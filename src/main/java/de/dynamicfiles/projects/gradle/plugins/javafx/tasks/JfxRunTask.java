@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 import org.gradle.api.tasks.TaskAction;
@@ -43,9 +44,21 @@ public class JfxRunTask extends JfxTask {
         project.getLogger().lifecycle("Running JavaFX Application");
 
         List<String> command = new ArrayList<>();
-        command.add("java");
+        command.add(getEnvironmentRelativeExecutablePath(ext.isUseEnvironmentRelativeExecutables()) + "java");
+        Optional.ofNullable(ext.getRunJavaParameter()).ifPresent(runJavaParameter -> {
+            if( runJavaParameter.trim().isEmpty() ){
+                return;
+            }
+            command.add(runJavaParameter);
+        });
         command.add("-jar");
         command.add(ext.getJfxMainAppJarName());
+        Optional.ofNullable(ext.getRunAppParameter()).ifPresent(runAppParameter -> {
+            if( runAppParameter.trim().isEmpty() ){
+                return;
+            }
+            command.add(runAppParameter);
+        });
 
         try{
             ProcessBuilder pb = new ProcessBuilder();
