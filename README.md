@@ -66,17 +66,18 @@ jfx {
     jfxAppOutputDir = "build/jfx/app"
     jfxMainAppJarName = "project-jfx.jar"
     deployDir = "src/main/deploy"
+    useEnvironmentRelativeExecutables = true
     
     // gradle jfxJar
     css2bin = false
-    preLoader = null
+    preLoader = null // String
     updateExistingJar = false
     allPermissions = false
     manifestAttributes = null // Map<String, String>
     addPackagerJar = true
 
     // gradle jfxNative
-    identifier = null // setting this for windows-bundlers makes it possible to generate upgradeable installers (using same GUID)
+    identifier = null  // String - setting this for windows-bundlers makes it possible to generate upgradeable installers (using same GUID)
     vendor = "some serious business corp."
     nativeOutputDir = "build/jfx/native"
     bundler = "ALL" // set this to some specific, if your don't want all bundlers running, examples "windows.app", "jnlp", ...
@@ -96,7 +97,7 @@ jfx {
     secondaryLaunchers = [[appName:"somethingDifferent"], [appName:"somethingDifferent2"]]
     fileAssociations = null // List<Map<String, Object>>
     noBlobSigning = false // when using bundler "jnlp", you can choose to NOT use blob signing
-    customBundlers // List<String>
+    customBundlers = null // List<String>
     skipNativeLauncherWorkaround205 = false
     
     skipNativeLauncherWorkaround124 = false
@@ -104,6 +105,10 @@ jfx {
     skipJNLPRessourcePathWorkaround182 = false
     skipSigningJarFilesJNLP185 = false
     skipSizeRecalculationForJNLP185 = false
+    
+    // gradle jfxRun
+    runJavaParameter = null // String
+    runAppParameter = null // String
 
     // per default the outcome of the gradle "jarTask" will be used, set this to specify otherwise (like proguard-output)
     alternativePathToJarFile = null // String
@@ -217,6 +222,9 @@ upcoming Version 8.6.0 (??-Aug-2016)
 New
 * added `alternativePathToJarFile`-property to specify the jar-file which gets used for javafx-jar-transformation
 * added `usePatchedJFXAntLib`-property to disable gradle daemon workaround of the JDK-bug (which might be required when patching does result in crashing the JVM)
+* added `useEnvironmentRelativeExecutables`-property to change the executables being used from the JDK instead of environment-relative (which could differ due to multiple local java-installations)
+* added possibility to adjust java-command used for `jfxRun`-task: it is now possible to pass parameters to your jfx-application
+* added possibility to adjust java-command used for `jfxRun`-task: it is now possible to pass parameters to the java-executable, e.g. to specify some javassist-module or other JVM-related stuff (like Xmx or other funny things)
 
 Bugfixes
 * fixed issue #29 and #30 regarding stdout/stderr not printed when Gradle is in daemon mode (which is default for Gradle 3 now)
