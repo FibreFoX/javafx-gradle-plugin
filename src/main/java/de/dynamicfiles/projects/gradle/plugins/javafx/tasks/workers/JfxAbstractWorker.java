@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package de.dynamicfiles.projects.gradle.plugins.javafx.tasks;
+package de.dynamicfiles.projects.gradle.plugins.javafx.tasks.workers;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -25,7 +25,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.function.Consumer;
-import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 import org.gradle.api.logging.Logger;
@@ -34,7 +33,7 @@ import org.gradle.api.logging.Logger;
  *
  * @author Danny Althoff
  */
-public abstract class JfxTask extends DefaultTask {
+public abstract class JfxAbstractWorker {
 
     protected void addDeployDirToSystemClassloader(Project project, String deployDir) {
         // add deployDir to system classpath

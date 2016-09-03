@@ -15,66 +15,20 @@
  */
 package de.dynamicfiles.projects.gradle.plugins.javafx.tasks;
 
-import com.oracle.tools.packager.BundlerParamInfo;
-import com.oracle.tools.packager.Bundlers;
-import com.oracle.tools.packager.ConfigException;
-import com.oracle.tools.packager.UnsupportedPlatformException;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import org.gradle.api.Project;
-import org.gradle.api.logging.LogLevel;
-import org.gradle.api.logging.Logger;
+import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.workers.JfxListBundlersWorker;
+import org.gradle.api.internal.AbstractTask;
 import org.gradle.api.tasks.TaskAction;
 
 /**
  *
  * @author Danny Althoff
  */
-public class JfxListBundlersTask extends JfxTask {
+public class JfxListBundlersTask extends AbstractTask {
 
     public static final String JFX_TASK_NAME = "jfxListBundlers";
 
     @TaskAction
     public void jfxlistbundlers() {
-        Project project = this.getProject();
-        Logger logger = project.getLogger();
-
-        Bundlers bundlers = Bundlers.createBundlersInstance();
-        logger.info("Available bundlers:");
-        logger.info("-------------------");
-        Map<String, ? super Object> dummyParams = new HashMap<>();
-        bundlers.getBundlers().stream().forEach((bundler) -> {
-            try{
-                bundler.validate(dummyParams);
-            } catch(UnsupportedPlatformException ex){
-                return;
-            } catch(ConfigException ex){
-                // NO-OP
-                // bundler is supported on this OS
-            }
-
-            logger.lifecycle("ID: " + bundler.getID());
-            logger.lifecycle("Name: " + bundler.getName());
-            logger.lifecycle("Description: " + bundler.getDescription());
-
-            Collection<BundlerParamInfo<?>> bundleParameters = bundler.getBundleParameters();
-            Optional.ofNullable(bundleParameters).ifPresent(nonNullBundleArguments -> {
-                logger.info("Available bundle arguments: ");
-                nonNullBundleArguments.stream().forEach(bundleArgument -> {
-                    logger.info("\t\tArgument ID: " + bundleArgument.getID());
-                    logger.info("\t\tArgument Type: " + bundleArgument.getValueType().getName());
-                    logger.info("\t\tArgument Name: " + bundleArgument.getName());
-                    logger.info("\t\tArgument Description: " + bundleArgument.getDescription());
-                    logger.info("");
-                });
-            });
-            logger.lifecycle("-------------------");
-        });
-
-        if( !logger.isEnabled(LogLevel.INFO) ) {
-            logger.lifecycle("For more information, please use --info parameter.");
-        }
+        new JfxListBundlersWorker().jfxlistbundlers(this.getProject());
     }
 }

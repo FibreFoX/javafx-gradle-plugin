@@ -15,77 +15,20 @@
  */
 package de.dynamicfiles.projects.gradle.plugins.javafx.tasks;
 
-import com.oracle.tools.packager.Log;
-import de.dynamicfiles.projects.gradle.plugins.javafx.JavaFXGradlePluginExtension;
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import org.gradle.api.GradleException;
-import org.gradle.api.Project;
+import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.workers.JfxRunWorker;
+import org.gradle.api.internal.AbstractTask;
 import org.gradle.api.tasks.TaskAction;
 
 /**
  *
  * @author Danny Althoff
  */
-public class JfxRunTask extends JfxTask {
+public class JfxRunTask extends AbstractTask {
 
     public static final String JFX_TASK_NAME = "jfxRun";
 
     @TaskAction
     public void jfxrun() {
-        Project project = this.getProject();
-        // get our configuration
-        JavaFXGradlePluginExtension ext = project.getExtensions().getByType(JavaFXGradlePluginExtension.class);
-        addDeployDirToSystemClassloader(project, ext.getDeployDir());
-
-        // set logger-level
-        Log.setLogger(new Log.Logger(ext.isVerbose()));
-        project.getLogger().lifecycle("Running JavaFX Application");
-
-        List<String> command = new ArrayList<>();
-        command.add(getEnvironmentRelativeExecutablePath(ext.isUseEnvironmentRelativeExecutables()) + "java");
-        Optional.ofNullable(ext.getRunJavaParameter()).ifPresent(runJavaParameter -> {
-            if( runJavaParameter.trim().isEmpty() ){
-                return;
-            }
-            command.add(runJavaParameter);
-        });
-        command.add("-jar");
-        command.add(ext.getJfxMainAppJarName());
-        Optional.ofNullable(ext.getRunAppParameter()).ifPresent(runAppParameter -> {
-            if( runAppParameter.trim().isEmpty() ){
-                return;
-            }
-            command.add(runAppParameter);
-        });
-
-        try{
-            ProcessBuilder pb = new ProcessBuilder();
-            if( !isGradleDaemonMode() ){
-                pb.inheritIO();
-            }
-
-            if( ext.isVerbose() ){
-                project.getLogger().lifecycle("Running command: " + String.join(" ", command));
-            }
-
-            pb.directory(new File(project.getProjectDir(), ext.getJfxAppOutputDir()))
-                    .command(command);
-            Process p = pb.start();
-
-            if( isGradleDaemonMode() ){
-                redirectIO(p, project.getLogger());
-            }
-
-            p.waitFor();
-            if( p.exitValue() != 0 ){
-                throw new GradleException("There was an exception while executing JavaFX Application. Please check build-log.");
-            }
-        } catch(IOException | InterruptedException ex){
-            throw new GradleException("There was an exception while executing JavaFX Application.", ex);
-        }
+        new JfxRunWorker().jfxrun(this.getProject());
     }
 }

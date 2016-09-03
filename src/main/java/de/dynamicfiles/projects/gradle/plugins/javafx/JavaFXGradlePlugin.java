@@ -43,60 +43,55 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
 
     @Override
     public void apply(Project project) {
+        // can create jfx-jar only after jar-file was created
+        if( project.getTasks().findByName("jar") == null ){
+            throw new GradleException("Could not find jar-task. Please make sure you are applying the 'java'-plugin.");
+        }
         // gradle is lame, so replace existing tasks with MY NAMES ! *battle-cry*
-        // will be replaced by real classes later (after evaluation)
-        project.getTasks().replace(JfxJarTask.JFX_TASK_NAME);
-        project.getTasks().replace(JfxNativeTask.JFX_TASK_NAME);
-        project.getTasks().replace(JfxGenerateKeystoreTask.JFX_TASK_NAME);
-        project.getTasks().replace(JfxRunTask.JFX_TASK_NAME);
-        project.getTasks().replace(JfxListBundlersTask.JFX_TASK_NAME);
+
+        // this tasks will be available for the buldscript
+        JfxJarTask jarTask = project.getTasks().replace(JfxJarTask.JFX_TASK_NAME, JfxJarTask.class);
+        JfxNativeTask nativeTask = project.getTasks().replace(JfxNativeTask.JFX_TASK_NAME, JfxNativeTask.class);
+        JfxGenerateKeystoreTask generateKeystoreTask = project.getTasks().replace(JfxGenerateKeystoreTask.JFX_TASK_NAME, JfxGenerateKeystoreTask.class);
+        JfxRunTask runTask = project.getTasks().replace(JfxRunTask.JFX_TASK_NAME, JfxRunTask.class);
+        JfxListBundlersTask jfxListBundlersTask = project.getTasks().replace(JfxListBundlersTask.JFX_TASK_NAME, JfxListBundlersTask.class);
+
+        String taskGroupName = "JavaFX";
+
+        // this is for description
+        jarTask.setGroup(taskGroupName);
+        jarTask.setDescription("Create executable JavaFX-jar");
+
+        nativeTask.setGroup(taskGroupName);
+        nativeTask.setDescription("Create native JavaFX-bundle");
+
+        generateKeystoreTask.setGroup(taskGroupName);
+        generateKeystoreTask.setDescription("Create a Java keystore");
+
+        runTask.setGroup(taskGroupName);
+        runTask.setDescription("Start generated JavaFX-jar");
+
+        jfxListBundlersTask.setGroup(taskGroupName);
+        jfxListBundlersTask.setDescription("List all possible bundlers available on this system, use '--info' parameter for detailed information");
+
+        jarTask.dependsOn(project.getTasks().getByName("jar"));
+
+        // always create jfx-jar before creating native launcher/bundle
+        // (in maven I had to implement a lifecycle for this ... mehhh)
+        nativeTask.dependsOn(jarTask);
+
+        // to run our jfx-jar, we have to create it first ;)
+        runTask.dependsOn(jarTask);
 
         // extend project-model to get our settings/configuration via nice configuration
         project.getExtensions().create("jfx", JavaFXGradlePluginExtension.class);
 
-        // can create jfx-jar only after jar-file was created (is this the right way?!?)
-        if( project.getTasks().findByName("jar") == null ){
-            throw new GradleException("Could not find jar-task. Please make sure you are applying the 'java'-plugin.");
-        }
-
+        // adding tasks AFTER evaluation has one huge problem: we need to copy all "dependsOn" and other stuff, because they happen before full evaluation
         project.afterEvaluate(evaluatedProject -> {
             // ugly hack by adding ant-javafx-jar for only require to apply javafx-gradle-plugin
             // ... can't change via expected way: dependencies.add("classpath", jfxAntJar)
             // https://discuss.gradle.org/t/how-to-bootstrapp-buildscript-classpath-cannot-change-configuration-classpath-after-it-has-been-resolved/7442
             addJavaFXAntJARToGradleBuildpath(evaluatedProject);
-
-            JfxJarTask jarTask = evaluatedProject.getTasks().replace(JfxJarTask.JFX_TASK_NAME, JfxJarTask.class);
-            JfxNativeTask nativeTask = evaluatedProject.getTasks().replace(JfxNativeTask.JFX_TASK_NAME, JfxNativeTask.class);
-            JfxGenerateKeystoreTask generateKeystoreTask = evaluatedProject.getTasks().replace(JfxGenerateKeystoreTask.JFX_TASK_NAME, JfxGenerateKeystoreTask.class);
-            JfxRunTask runTask = evaluatedProject.getTasks().replace(JfxRunTask.JFX_TASK_NAME, JfxRunTask.class);
-            JfxListBundlersTask jfxListBundlersTask = evaluatedProject.getTasks().replace(JfxListBundlersTask.JFX_TASK_NAME, JfxListBundlersTask.class);
-
-            String taskGroupName = "JavaFX";
-
-            // this is for description
-            jarTask.setGroup(taskGroupName);
-            jarTask.setDescription("Create executable JavaFX-jar");
-
-            nativeTask.setGroup(taskGroupName);
-            nativeTask.setDescription("Create native JavaFX-bundle");
-
-            generateKeystoreTask.setGroup(taskGroupName);
-            generateKeystoreTask.setDescription("Create a Java keystore");
-
-            runTask.setGroup(taskGroupName);
-            runTask.setDescription("Start generated JavaFX-jar");
-
-            jfxListBundlersTask.setGroup(taskGroupName);
-            jfxListBundlersTask.setDescription("List all possible bundlers available on this system, use '--info' parameter for detailed information");
-
-            jarTask.dependsOn(evaluatedProject.getTasks().getByName("jar"));
-
-            // always create jfx-jar before creating native launcher/bundle
-            // (in maven I had to implement a lifecycle for this ... mehhh)
-            nativeTask.dependsOn(jarTask);
-
-            // to run our jfx-jar, we have to create it first ;)
-            runTask.dependsOn(jarTask);
         });
     }
 
