@@ -49,7 +49,7 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
         }
         // gradle is lame, so replace existing tasks with MY NAMES ! *battle-cry*
 
-        // this tasks will be available for the buldscript
+        // tasks will be available for the buldscript prior full evaluation
         JfxJarTask jarTask = project.getTasks().replace(JfxJarTask.JFX_TASK_NAME, JfxJarTask.class);
         JfxNativeTask nativeTask = project.getTasks().replace(JfxNativeTask.JFX_TASK_NAME, JfxNativeTask.class);
         JfxGenerateKeystoreTask generateKeystoreTask = project.getTasks().replace(JfxGenerateKeystoreTask.JFX_TASK_NAME, JfxGenerateKeystoreTask.class);
@@ -86,7 +86,7 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
         // extend project-model to get our settings/configuration via nice configuration
         project.getExtensions().create("jfx", JavaFXGradlePluginExtension.class);
 
-        // adding tasks AFTER evaluation has one huge problem: we need to copy all "dependsOn" and other stuff, because they happen before full evaluation
+        // adding ant-javafx.jar AFTER evaluation, because otherwise we can't know if the user has choosen to NOT patch ant-javafx.jar (in case it is required)
         project.afterEvaluate(evaluatedProject -> {
             // ugly hack by adding ant-javafx-jar for only require to apply javafx-gradle-plugin
             // ... can't change via expected way: dependencies.add("classpath", jfxAntJar)
