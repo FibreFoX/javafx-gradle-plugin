@@ -232,4 +232,5 @@ Enhancements:
 
 upcoming Version 8.6.1 (??-2016)
 
-* nothing changed yet
+Bugfixes:
+* reverted the idea of registering the real tasks after project-evaluation, only add ant-javafx.jar after project-evaluation (fixes issue #31)
