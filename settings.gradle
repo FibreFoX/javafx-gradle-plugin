@@ -1,1 +1,3 @@
 rootProject.name = 'javafx-gradle-plugin'
+
+apply from: 'version.gradle'

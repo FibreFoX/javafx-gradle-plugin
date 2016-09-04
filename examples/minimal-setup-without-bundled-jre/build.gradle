@@ -1,6 +1,7 @@
+apply from: '../../version.gradle'
 buildscript {
     dependencies {
-        classpath group: 'de.dynamicfiles.projects.gradle.plugins', name: 'javafx-gradle-plugin', version: '8.4.2-SNAPSHOT'
+        classpath group: 'de.dynamicfiles.projects.gradle.plugins', name: 'javafx-gradle-plugin', version: "${gradle.currentPluginVersion}"
     }
     repositories {
         mavenLocal()

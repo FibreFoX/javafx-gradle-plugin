@@ -1,5 +1,6 @@
 // this example rebuilds the integration test project "08-build-with-proguard" from the javafx-maven-plugin
 
+apply from: '../../version.gradle'
 buildscript {
     repositories {
         mavenLocal()
@@ -8,7 +9,7 @@ buildscript {
     }
     dependencies {
         // provides javafx-gradle-plugin
-        classpath group: 'de.dynamicfiles.projects.gradle.plugins', name: 'javafx-gradle-plugin', version: "8.5.3-SNAPSHOT"
+        classpath group: 'de.dynamicfiles.projects.gradle.plugins', name: 'javafx-gradle-plugin', version: "${gradle.currentPluginVersion}"
         // provides proguard.gradle.ProGuardTask (including all requirements)
         classpath 'net.sf.proguard:proguard-gradle:5.2.1'
     }

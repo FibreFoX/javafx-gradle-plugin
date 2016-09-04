@@ -28,6 +28,7 @@ repositories {
 
 dependencies {
     compile gradleApi()
+    testCompile gradleTestKit()
     compile files("${System.properties['java.home']}/../lib/ant-javafx.jar")
     compile 'org.ow2.asm:asm-all:5.1'
     runtime 'org.ow2.asm:asm-all:5.1'
@@ -35,7 +36,7 @@ dependencies {
 
 group = 'de.dynamicfiles.projects.gradle.plugins'
 archivesBaseName = 'javafx-gradle-plugin'
-version = '8.6.1-SNAPSHOT'
+version = gradle.currentPluginVersion
 
 ext.isReleaseVersion = !version.endsWith("SNAPSHOT")
 
