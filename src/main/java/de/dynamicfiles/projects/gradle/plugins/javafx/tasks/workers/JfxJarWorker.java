@@ -64,7 +64,7 @@ public class JfxJarWorker extends JfxAbstractWorker {
         } catch(IOException ex){
             throw new GradleException("Couldn't create temporary folder", ex);
         }
-        project.getLogger().info("Extraction generated JAR-file ...");
+        project.getLogger().info("Extraction of generated JAR-file ...");
         project.copy((CopySpec copySpec) -> {
             copySpec.into(someTempDir.toFile());
             if( ext.getAlternativePathToJarFile() == null ){
