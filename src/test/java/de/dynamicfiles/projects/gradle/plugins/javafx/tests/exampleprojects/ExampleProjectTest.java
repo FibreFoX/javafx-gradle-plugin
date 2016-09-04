@@ -28,27 +28,23 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-import org.gradle.testkit.runner.BuildResult;
-import org.gradle.testkit.runner.GradleRunner;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
 
 /**
  *
  * @author Danny Althoff
  */
-public class ExampleProjects {
+public abstract class ExampleProjectTest {
 
-    private static final List<String> GRADLE_VERSIONS_TO_TEST_AGAINST = new ArrayList<>();
+    protected static final List<String> GRADLE_VERSIONS_TO_TEST_AGAINST = new ArrayList<>();
 
     static {
         GRADLE_VERSIONS_TO_TEST_AGAINST.add("2.10");
         GRADLE_VERSIONS_TO_TEST_AGAINST.add("3.0");
     }
-    private static String versionString = "+";
 
-    @BeforeClass
-    public static void readVersion() throws IOException {
+    protected static String versionString = "+";
+
+    public static void readVersionString() throws IOException {
         List<String> versionFileLines = Files.readAllLines(new File("version.gradle").toPath());
         versionFileLines.forEach(line -> {
             if( line.contains("currentPluginVersion") ){
@@ -57,53 +53,7 @@ public class ExampleProjects {
         });
     }
 
-    @Test
-    public void minimalSetupJfxJar() {
-        GRADLE_VERSIONS_TO_TEST_AGAINST.forEach(gradleVersion -> {
-            GradleRunner runner = GradleRunner.create().withGradleVersion(gradleVersion).forwardOutput();
-
-            try{
-                Path targetFolder = Files.createTempDirectory("javafx-gradle-plugin-tests-" + this.getClass().getSimpleName() + "-minimalSetupJfxJar");
-                Path sourceFolder = new File("examples/minimal-setup-jfxjar").toPath();
-                // create copyto work on
-                copyFolderRecursive(sourceFolder, targetFolder);
-
-                writePluginVersionIntoBuildScript(targetFolder);
-
-                // run build
-                BuildResult buildResult = runner.withProjectDir(targetFolder.toAbsolutePath().toFile())
-                        .withArguments("clean", "jfxJar")
-                        .build();
-            } catch(IOException e){
-
-            }
-        });
-    }
-
-    @Test
-    public void minimalSetupJfxNative() {
-        GRADLE_VERSIONS_TO_TEST_AGAINST.forEach(gradleVersion -> {
-            GradleRunner runner = GradleRunner.create().withGradleVersion(gradleVersion).forwardOutput();
-
-            try{
-                Path targetFolder = Files.createTempDirectory("javafx-gradle-plugin-tests-" + this.getClass().getSimpleName() + "-minimalSetupJfxNative");
-                Path sourceFolder = new File("examples/minimal-setup-jfxnative").toPath();
-                // create copyto work on
-                copyFolderRecursive(sourceFolder, targetFolder);
-
-                writePluginVersionIntoBuildScript(targetFolder);
-
-                // run build
-                BuildResult buildResult = runner.withProjectDir(targetFolder.toAbsolutePath().toFile())
-                        .withArguments("clean", "jfxnative")
-                        .build();
-            } catch(IOException e){
-
-            }
-        });
-    }
-
-    private void writePluginVersionIntoBuildScript(Path targetFolder) throws IOException {
+    protected void writePluginVersionIntoBuildScript(Path targetFolder) throws IOException {
         // adjust the inclusion of version.gradle-file
         Path buildScript = targetFolder.resolve("build.gradle");
 
@@ -119,7 +69,7 @@ public class ExampleProjects {
         }).collect(Collectors.toList()), StandardCharsets.UTF_8, StandardOpenOption.TRUNCATE_EXISTING);
     }
 
-    private void copyFolderRecursive(Path sourceFolder, Path targetFolder) throws IOException {
+    protected void copyFolderRecursive(Path sourceFolder, Path targetFolder) throws IOException {
         Files.walkFileTree(sourceFolder, new FileVisitor<Path>() {
 
             @Override
