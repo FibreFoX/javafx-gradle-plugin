@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package de.dynamicfiles.projects.gradle.plugins.javafx.tests;
+package de.dynamicfiles.projects.gradle.plugins.javafx.tests.exampleprojects;
 
 import java.io.File;
 import java.io.IOException;
@@ -25,9 +25,12 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.Collectors;
 import org.gradle.testkit.runner.BuildResult;
 import org.gradle.testkit.runner.GradleRunner;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 /**
@@ -36,59 +39,81 @@ import org.testng.annotations.Test;
  */
 public class ExampleProjects {
 
+    private static final List<String> GRADLE_VERSIONS_TO_TEST_AGAINST = new ArrayList<>();
+
+    static {
+        GRADLE_VERSIONS_TO_TEST_AGAINST.add("2.10");
+        GRADLE_VERSIONS_TO_TEST_AGAINST.add("3.0");
+    }
+    private static String versionString = "+";
+
+    @BeforeClass
+    public static void readVersion() throws IOException {
+        List<String> versionFileLines = Files.readAllLines(new File("version.gradle").toPath());
+        versionFileLines.forEach(line -> {
+            if( line.contains("currentPluginVersion") ){
+                versionString = line.replace("currentPluginVersion", "").replace("=", "").replace("'", "").trim();
+            }
+        });
+    }
+
     @Test
     public void minimalSetupJfxJar() {
-        GradleRunner runner = GradleRunner.create();
+        GRADLE_VERSIONS_TO_TEST_AGAINST.forEach(gradleVersion -> {
+            GradleRunner runner = GradleRunner.create().withGradleVersion(gradleVersion).forwardOutput();
 
-        try{
-            Path targetFolder = Files.createTempDirectory("javafx-gradle-plugin-tests-" + this.getClass().getSimpleName() + "-minimalSetupJfxJar");
-            Path sourceFolder = new File("examples/minimal-setup-jfxjar").toPath();
-            // create copyto work on
-            copyFolderRecursive(sourceFolder, targetFolder);
+            try{
+                Path targetFolder = Files.createTempDirectory("javafx-gradle-plugin-tests-" + this.getClass().getSimpleName() + "-minimalSetupJfxJar");
+                Path sourceFolder = new File("examples/minimal-setup-jfxjar").toPath();
+                // create copyto work on
+                copyFolderRecursive(sourceFolder, targetFolder);
 
-            writePluginVersionIntoBuildScript(targetFolder);
+                writePluginVersionIntoBuildScript(targetFolder);
 
-            // run build
-            BuildResult buildResult = runner.withProjectDir(targetFolder.toAbsolutePath().toFile())
-                    .withArguments("clean", "jfxJar")
-                    .build();
-        } catch(IOException e){
+                // run build
+                BuildResult buildResult = runner.withProjectDir(targetFolder.toAbsolutePath().toFile())
+                        .withArguments("clean", "jfxJar")
+                        .build();
+            } catch(IOException e){
 
-        }
+            }
+        });
     }
 
     @Test
     public void minimalSetupJfxNative() {
-        GradleRunner runner = GradleRunner.create();
+        GRADLE_VERSIONS_TO_TEST_AGAINST.forEach(gradleVersion -> {
+            GradleRunner runner = GradleRunner.create().withGradleVersion(gradleVersion).forwardOutput();
 
-        try{
-            Path targetFolder = Files.createTempDirectory("javafx-gradle-plugin-tests-" + this.getClass().getSimpleName() + "-minimalSetupJfxNative");
-            Path sourceFolder = new File("examples/minimal-setup-jfxnative").toPath();
-            // create copyto work on
-            copyFolderRecursive(sourceFolder, targetFolder);
+            try{
+                Path targetFolder = Files.createTempDirectory("javafx-gradle-plugin-tests-" + this.getClass().getSimpleName() + "-minimalSetupJfxNative");
+                Path sourceFolder = new File("examples/minimal-setup-jfxnative").toPath();
+                // create copyto work on
+                copyFolderRecursive(sourceFolder, targetFolder);
 
-            writePluginVersionIntoBuildScript(targetFolder);
+                writePluginVersionIntoBuildScript(targetFolder);
 
-            // run build
-            BuildResult buildResult = runner.withProjectDir(targetFolder.toAbsolutePath().toFile())
-                    .withArguments("clean", "jfxnative")
-                    .build();
-        } catch(IOException e){
+                // run build
+                BuildResult buildResult = runner.withProjectDir(targetFolder.toAbsolutePath().toFile())
+                        .withArguments("clean", "jfxnative")
+                        .build();
+            } catch(IOException e){
 
-        }
+            }
+        });
     }
 
     private void writePluginVersionIntoBuildScript(Path targetFolder) throws IOException {
         // adjust the inclusion of version.gradle-file
         Path buildScript = targetFolder.resolve("build.gradle");
+
         Files.write(buildScript, Files.readAllLines(buildScript).stream().map(line -> {
             // remove this, we are "hardcoding" our version
             if( "apply from: '../../version.gradle'".equals(line) ){
                 return "";
             }
             if( line.endsWith("version: \"${gradle.currentPluginVersion}\"") ){
-                // TODO get correct version
-                return line.replace("version: \"${gradle.currentPluginVersion}\"", "version: '8.6.1-SNAPSHOT'");
+                return line.replace("version: \"${gradle.currentPluginVersion}\"", "version: '" + versionString + "'");
             }
             return line;
         }).collect(Collectors.toList()), StandardCharsets.UTF_8, StandardOpenOption.TRUNCATE_EXISTING);
