@@ -1,7 +1,8 @@
 // this example rebuilds the integration test project "08-build-with-proguard" from the javafx-maven-plugin
 
-apply from: '../../version.gradle'
+
 buildscript {
+    apply from: '../../version.gradle'
     repositories {
         mavenLocal()
         mavenCentral()

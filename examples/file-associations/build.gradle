@@ -1,5 +1,5 @@
-apply from: '../../version.gradle'
 buildscript {
+    apply from: '../../version.gradle'
     dependencies {
         classpath group: 'de.dynamicfiles.projects.gradle.plugins', name: 'javafx-gradle-plugin', version: "${gradle.currentPluginVersion}"
     }
