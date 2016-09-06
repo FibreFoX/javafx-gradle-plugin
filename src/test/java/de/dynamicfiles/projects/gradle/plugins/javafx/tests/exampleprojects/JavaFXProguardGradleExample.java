@@ -21,6 +21,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import org.gradle.testkit.runner.BuildResult;
 import org.gradle.testkit.runner.GradleRunner;
+import static org.testng.Assert.assertTrue;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
@@ -75,7 +76,20 @@ public class JavaFXProguardGradleExample extends ExampleProjectTest {
                 BuildResult buildResult = runner.withProjectDir(targetFolder.toAbsolutePath().toFile())
                         .withArguments("clean", "jfxNative")
                         .build();
-                // TODO check result (currently this is only a "runs without problems"-test)
+                // check result
+
+                // jar outcome
+                assertTrue(
+                        Files.exists(targetFolder.resolve("build").resolve("libs").resolve("javafx-proguard-gradle.jar"))
+                );
+                // myProguardTask outcome
+                assertTrue(
+                        Files.exists(targetFolder.resolve("build").resolve("libs").resolve("javafx-proguard-gradle.out.jar"))
+                );
+                // jfxJar outcome
+                assertTrue(
+                        Files.exists(targetFolder.resolve("build").resolve("jfx").resolve("app").resolve("javafx-proguard-gradle-jfx.jar"))
+                );
             } catch(IOException e){
 
             }
