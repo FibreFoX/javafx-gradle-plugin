@@ -59,7 +59,7 @@ public abstract class ExampleProjectTest {
 
         Files.write(buildScript, Files.readAllLines(buildScript).stream().map(line -> {
             // remove this, we are "hardcoding" our version
-            if( "apply from: '../../version.gradle'".equals(line) ){
+            if( "apply from: '../../version.gradle'".equals(line.trim()) ){
                 return "";
             }
             if( line.endsWith("version: \"${gradle.currentPluginVersion}\"") ){
