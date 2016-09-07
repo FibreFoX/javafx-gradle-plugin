@@ -18,7 +18,7 @@ package de.dynamicfiles.projects.gradle.plugins.javafx.tasks.internal;
 import com.oracle.tools.packager.IOUtils;
 import com.oracle.tools.packager.RelativeFileSet;
 import com.oracle.tools.packager.StandardBundlerParam;
-import de.dynamicfiles.projects.gradle.plugins.javafx.converter.NativeLauncher;
+import de.dynamicfiles.projects.gradle.plugins.javafx.dto.NativeLauncher;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
