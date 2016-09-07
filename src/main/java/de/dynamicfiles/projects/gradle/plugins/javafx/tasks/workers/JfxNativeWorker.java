@@ -15,6 +15,7 @@
  */
 package de.dynamicfiles.projects.gradle.plugins.javafx.tasks.workers;
 
+import com.oracle.tools.packager.AbstractBundler;
 import com.oracle.tools.packager.Bundler;
 import com.oracle.tools.packager.Bundlers;
 import com.oracle.tools.packager.ConfigException;
@@ -120,7 +121,7 @@ public class JfxNativeWorker extends JfxAbstractWorker {
                     try{
                         Path targetFolder = getAbsoluteOrProjectRelativeFile(project, ext.getJfxAppOutputDir(), ext.isCheckForAbsolutePaths()).toPath();
                         Path sourceFolder = appResources.toPath();
-                        Files.walkFileTree(appResources.toPath(), new FileVisitor<Path>() {
+                        Files.walkFileTree(sourceFolder, new FileVisitor<Path>() {
 
                             @Override
                             public FileVisitResult preVisitDirectory(Path subfolder, BasicFileAttributes attrs) throws IOException {
@@ -150,7 +151,7 @@ public class JfxNativeWorker extends JfxAbstractWorker {
                             }
                         });
                     } catch(IOException e){
-                        logger.warn("Couldn't copy additional application resource-file.", e);
+                        logger.warn("Couldn't copy additional application resource-file(s).", e);
                     }
                 });
 
@@ -327,6 +328,51 @@ public class JfxNativeWorker extends JfxAbstractWorker {
             try{
                 Map<String, ? super Object> paramsToBundleWith = new HashMap<>(params);
                 if( b.validate(paramsToBundleWith) ){
+
+                    // copy all files every time a bundler runs, because they might cleanup their folders,
+                    // but user might have extend existing bundler using same foldername (which would end up deleted/cleaned up)
+                    // fixes "Make it possible to have additional resources for bundlers"
+                    // see https://github.com/FibreFoX/javafx-gradle-plugin/issues/38
+                    if( ext.getAdditionalBundlerResources() != null ){
+                        File bundlerImageRoot = AbstractBundler.IMAGES_ROOT.fetchFrom(paramsToBundleWith);
+                        try{
+                            Path targetFolder = bundlerImageRoot.toPath();
+                            Path sourceFolder = getAbsoluteOrProjectRelativeFile(project, ext.getAdditionalBundlerResources(), ext.isCheckForAbsolutePaths()).toPath();
+                            Files.walkFileTree(sourceFolder, new FileVisitor<Path>() {
+
+                                @Override
+                                public FileVisitResult preVisitDirectory(Path subfolder, BasicFileAttributes attrs) throws IOException {
+                                    // do create subfolder (if needed)
+                                    Files.createDirectories(targetFolder.resolve(sourceFolder.relativize(subfolder)));
+                                    return FileVisitResult.CONTINUE;
+                                }
+
+                                @Override
+                                public FileVisitResult visitFile(Path sourceFile, BasicFileAttributes attrs) throws IOException {
+                                    // do copy
+                                    Files.copy(sourceFile, targetFolder.resolve(sourceFolder.relativize(sourceFile)), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES);
+                                    // do cleanup, because otherwise normal bundler cleanup would not work
+                                    targetFolder.resolve(sourceFolder.relativize(sourceFile)).toFile().deleteOnExit();
+                                    return FileVisitResult.CONTINUE;
+                                }
+
+                                @Override
+                                public FileVisitResult visitFileFailed(Path source, IOException ioe) throws IOException {
+                                    // don't fail, just inform user
+                                    logger.warn(String.format("Couldn't copy additional bundler resource %s with reason %s", source.toString(), ioe.getLocalizedMessage()));
+                                    return FileVisitResult.CONTINUE;
+                                }
+
+                                @Override
+                                public FileVisitResult postVisitDirectory(Path source, IOException ioe) throws IOException {
+                                    // nothing to do here
+                                    return FileVisitResult.CONTINUE;
+                                }
+                            });
+                        } catch(IOException e){
+                            logger.warn("Couldn't copy additional bundler resource-file(s).", e);
+                        }
+                    }
                     b.execute(paramsToBundleWith, getAbsoluteOrProjectRelativeFile(project, ext.getNativeOutputDir(), ext.isCheckForAbsolutePaths()));
 
                     // Workaround for "Native package for Ubuntu doesn't work"

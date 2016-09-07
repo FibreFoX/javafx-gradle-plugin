@@ -234,6 +234,7 @@ upcoming Version 8.7.0 (??-2016)
 
 New:
 * added `checkForAbsolutePaths`-property to enable absolute paths for all path-properties (it defaults to `false` to behave like before)
+* added `additionalBundlerResources` for being able to have additional files available to the used bundler
 
 Bugfixes:
 * made it possible to specify absolute paths for all path-properties, fixes issue #36
