@@ -40,12 +40,12 @@ public class JfxGenerateKeystoreWorker extends JfxAbstractWorker {
     public void jfxgeneratekeystore(Project project) {
         // get our configuration
         JavaFXGradlePluginExtension ext = project.getExtensions().getByType(JavaFXGradlePluginExtension.class);
-        addDeployDirToSystemClassloader(project, ext.getDeployDir());
+        addDeployDirToSystemClassloader(project, ext);
 
         // set logger-level
         Log.setLogger(new Log.Logger(ext.isVerbose()));
 
-        File keyStore = new File(project.getProjectDir(), ext.getKeyStore());
+        File keyStore = getAbsoluteOrProjectRelativeFile(project, ext.getKeyStore(), ext.isCheckForAbsolutePaths());
 
         if( keyStore.exists() ){
             if( ext.isOverwriteKeyStore() ){

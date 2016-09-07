@@ -65,12 +65,12 @@ public class JfxNativeWorker extends JfxAbstractWorker {
     public void jfxnative(Project project) {
         // get our configuration
         JavaFXGradlePluginExtension ext = project.getExtensions().getByType(JavaFXGradlePluginExtension.class);
-        addDeployDirToSystemClassloader(project, ext.getDeployDir());
+        addDeployDirToSystemClassloader(project, ext);
 
         String bundler = ext.getBundler();
         final Logger logger = project.getLogger();
 
-        workarounds = new Workarounds(new File(project.getProjectDir(), ext.getNativeOutputDir()), logger);
+        workarounds = new Workarounds(getAbsoluteOrProjectRelativeFile(project, ext.getNativeOutputDir(), ext.isCheckForAbsolutePaths()), logger);
 
         Map<String, ? super Object> params = new HashMap<>();
 
@@ -113,12 +113,12 @@ public class JfxNativeWorker extends JfxAbstractWorker {
         });
         Optional.ofNullable(ext.getAdditionalAppResources())
                 .filter(appRessourcesString -> appRessourcesString != null)
-                .map(appRessourcesString -> new File(project.getProjectDir(), appRessourcesString))
+                .map(appRessourcesString -> getAbsoluteOrProjectRelativeFile(project, appRessourcesString, ext.isCheckForAbsolutePaths()))
                 .filter(File::exists)
                 .ifPresent(appResources -> {
                     logger.info("Copying additional app ressources...");
                     try{
-                        Path targetFolder = new File(project.getProjectDir(), ext.getJfxAppOutputDir()).toPath();
+                        Path targetFolder = getAbsoluteOrProjectRelativeFile(project, ext.getJfxAppOutputDir(), ext.isCheckForAbsolutePaths()).toPath();
                         Path sourceFolder = appResources.toPath();
                         Files.walkFileTree(appResources.toPath(), new FileVisitor<Path>() {
 
@@ -157,7 +157,7 @@ public class JfxNativeWorker extends JfxAbstractWorker {
         // adding all resource-files
         Set<File> resourceFiles = new HashSet<>();
         try{
-            Files.walk(new File(project.getProjectDir(), ext.getJfxAppOutputDir()).toPath())
+            Files.walk(getAbsoluteOrProjectRelativeFile(project, ext.getJfxAppOutputDir(), ext.isCheckForAbsolutePaths()).toPath())
                     .map(p -> p.toFile())
                     .filter(File::isFile)
                     .filter(File::canRead)
@@ -168,7 +168,7 @@ public class JfxNativeWorker extends JfxAbstractWorker {
         } catch(IOException e){
             logger.warn("There was a problem while processing application files.", e);
         }
-        params.put(StandardBundlerParam.APP_RESOURCES.getID(), new RelativeFileSet(new File(project.getProjectDir(), ext.getJfxAppOutputDir()), resourceFiles));
+        params.put(StandardBundlerParam.APP_RESOURCES.getID(), new RelativeFileSet(getAbsoluteOrProjectRelativeFile(project, ext.getJfxAppOutputDir(), ext.isCheckForAbsolutePaths()), resourceFiles));
 
         Collection<String> duplicateKeys = new HashSet<>();
         Optional.ofNullable(ext.getBundleArguments()).ifPresent(bArguments -> {
@@ -327,7 +327,7 @@ public class JfxNativeWorker extends JfxAbstractWorker {
             try{
                 Map<String, ? super Object> paramsToBundleWith = new HashMap<>(params);
                 if( b.validate(paramsToBundleWith) ){
-                    b.execute(paramsToBundleWith, new File(project.getProjectDir(), ext.getNativeOutputDir()));
+                    b.execute(paramsToBundleWith, getAbsoluteOrProjectRelativeFile(project, ext.getNativeOutputDir(), ext.isCheckForAbsolutePaths()));
 
                     // Workaround for "Native package for Ubuntu doesn't work"
                     // https://github.com/javafx-maven-plugin/javafx-maven-plugin/issues/124
@@ -435,7 +435,7 @@ public class JfxNativeWorker extends JfxAbstractWorker {
         List<File> generatedFiles = new ArrayList<>();
 
         // try-ressource, because walking on files is lazy, resulting in file-handler left open otherwise
-        try(Stream<Path> walkstream = Files.walk(new File(project.getProjectDir(), ext.getNativeOutputDir()).toPath())){
+        try(Stream<Path> walkstream = Files.walk(getAbsoluteOrProjectRelativeFile(project, ext.getNativeOutputDir(), ext.isCheckForAbsolutePaths()).toPath())){
             walkstream.forEach(fileEntry -> {
                 File possibleJNLPFile = fileEntry.toFile();
                 String fileName = possibleJNLPFile.getName();
@@ -508,7 +508,7 @@ public class JfxNativeWorker extends JfxAbstractWorker {
     private void signJarFilesUsingBlobSigning(Project project, JavaFXGradlePluginExtension ext) {
         checkSigningConfiguration(project, ext);
 
-        File keyStore = new File(project.getProjectDir(), ext.getKeyStore());
+        File keyStore = getAbsoluteOrProjectRelativeFile(project, ext.getKeyStore(), ext.isCheckForAbsolutePaths());
 
         SignJarParams signJarParams = new SignJarParams();
         signJarParams.setVerbose(ext.isVerbose());
@@ -518,7 +518,7 @@ public class JfxNativeWorker extends JfxAbstractWorker {
         signJarParams.setKeyPass(ext.getKeyPassword());
         signJarParams.setStoreType(ext.getKeyStoreType());
 
-        File nativeOutputDir = new File(project.getProjectDir(), ext.getNativeOutputDir());
+        File nativeOutputDir = getAbsoluteOrProjectRelativeFile(project, ext.getNativeOutputDir(), ext.isCheckForAbsolutePaths());
 
         signJarParams.addResource(nativeOutputDir, ext.getJfxMainAppJarName());
 
@@ -537,7 +537,7 @@ public class JfxNativeWorker extends JfxAbstractWorker {
     private void signJarFiles(Project project, JavaFXGradlePluginExtension ext) {
         checkSigningConfiguration(project, ext);
 
-        File nativeOutputDir = new File(project.getProjectDir(), ext.getNativeOutputDir());
+        File nativeOutputDir = getAbsoluteOrProjectRelativeFile(project, ext.getNativeOutputDir(), ext.isCheckForAbsolutePaths());
         AtomicReference<GradleException> exception = new AtomicReference<>();
         getJARFilesFromJNLPFiles(project, ext).stream().map(relativeJarFilePath -> new File(nativeOutputDir, relativeJarFilePath)).forEach(jarFile -> {
             try{
@@ -556,7 +556,7 @@ public class JfxNativeWorker extends JfxAbstractWorker {
     }
 
     private void checkSigningConfiguration(Project project, JavaFXGradlePluginExtension ext) {
-        File keyStore = new File(project.getProjectDir(), ext.getKeyStore());
+        File keyStore = getAbsoluteOrProjectRelativeFile(project, ext.getKeyStore(), ext.isCheckForAbsolutePaths());
         if( !keyStore.exists() ){
             project.getLogger().lifecycle("Keystore does not exist (expected at: " + keyStore + ")");
             throw new GradleException("Keystore does not exist (expected at: " + keyStore + ")");
@@ -579,7 +579,7 @@ public class JfxNativeWorker extends JfxAbstractWorker {
     }
 
     private void signJar(Project project, JavaFXGradlePluginExtension ext, File jarFile) {
-        File keyStore = new File(project.getProjectDir(), ext.getKeyStore());
+        File keyStore = getAbsoluteOrProjectRelativeFile(project, ext.getKeyStore(), ext.isCheckForAbsolutePaths());
         List<String> command = new ArrayList<>();
         command.add(getEnvironmentRelativeExecutablePath(ext.isUseEnvironmentRelativeExecutables()) + "jarsigner");
         command.add("-strict");

@@ -230,9 +230,13 @@ Enhancements:
 (Not yet) Release(d) Notes
 ==========================
 
-upcoming Version 8.6.1 (??-2016)
+upcoming Version 8.7.0 (??-2016)
+
+New:
+* added `checkForAbsolutePaths`-property to enable absolute paths for all path-properties (it defaults to `false` to behave like before)
 
 Bugfixes:
+* made it possible to specify absolute paths for all path-properties, fixes issue #36
 * reverted the idea of registering the real tasks after project-evaluation, only add ant-javafx.jar after project-evaluation (fixes issue #31)
 
 Enhancements:

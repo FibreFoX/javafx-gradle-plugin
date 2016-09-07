@@ -17,7 +17,6 @@ package de.dynamicfiles.projects.gradle.plugins.javafx.tasks.workers;
 
 import com.oracle.tools.packager.Log;
 import de.dynamicfiles.projects.gradle.plugins.javafx.JavaFXGradlePluginExtension;
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,7 +33,7 @@ public class JfxRunWorker extends JfxAbstractWorker {
     public void jfxrun(Project project) {
         // get our configuration
         JavaFXGradlePluginExtension ext = project.getExtensions().getByType(JavaFXGradlePluginExtension.class);
-        addDeployDirToSystemClassloader(project, ext.getDeployDir());
+        addDeployDirToSystemClassloader(project, ext);
 
         // set logger-level
         Log.setLogger(new Log.Logger(ext.isVerbose()));
@@ -67,7 +66,7 @@ public class JfxRunWorker extends JfxAbstractWorker {
                 project.getLogger().lifecycle("Running command: " + String.join(" ", command));
             }
 
-            pb.directory(new File(project.getProjectDir(), ext.getJfxAppOutputDir()))
+            pb.directory(getAbsoluteOrProjectRelativeFile(project, ext.getJfxAppOutputDir(), ext.isCheckForAbsolutePaths()))
                     .command(command);
             Process p = pb.start();
 

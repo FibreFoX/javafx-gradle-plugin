@@ -47,7 +47,7 @@ public class JfxJarWorker extends JfxAbstractWorker {
     public void jfxjar(Project project) {
         // get our configuration
         JavaFXGradlePluginExtension ext = project.getExtensions().getByType(JavaFXGradlePluginExtension.class);
-        addDeployDirToSystemClassloader(project, ext.getDeployDir());
+        addDeployDirToSystemClassloader(project, ext);
 
         // set logger-level
         Log.setLogger(new Log.Logger(ext.isVerbose()));
@@ -70,7 +70,7 @@ public class JfxJarWorker extends JfxAbstractWorker {
             if( ext.getAlternativePathToJarFile() == null ){
                 copySpec.from(project.zipTree(jarTask.getArchivePath()));
             } else {
-                File alternativeJarFile = new File(project.getProjectDir(), ext.getAlternativePathToJarFile());
+                File alternativeJarFile = getAbsoluteOrProjectRelativeFile(project, ext.getAlternativePathToJarFile(), ext.isCheckForAbsolutePaths());
                 if( alternativeJarFile.exists() ){
                     copySpec.from(project.zipTree(alternativeJarFile));
                 } else {
@@ -83,7 +83,7 @@ public class JfxJarWorker extends JfxAbstractWorker {
         project.getLogger().info("Creating parameter-map for packager...");
 
         CreateJarParams createJarParams = new CreateJarParams();
-        createJarParams.setOutdir(new File(project.getProjectDir(), ext.getJfxAppOutputDir()));
+        createJarParams.setOutdir(getAbsoluteOrProjectRelativeFile(project, ext.getJfxAppOutputDir(), ext.isCheckForAbsolutePaths()));
 
         // check if we got some filename ending with ".jar"
         if( !ext.getJfxMainAppJarName().toLowerCase().endsWith(".jar") ){
@@ -100,7 +100,7 @@ public class JfxJarWorker extends JfxAbstractWorker {
         }
         createJarParams.setManifestAttrs(manifestAttributes);
 
-        final File libDir = new File(new File(project.getProjectDir(), ext.getJfxAppOutputDir()), "lib");
+        final File libDir = new File(getAbsoluteOrProjectRelativeFile(project, ext.getJfxAppOutputDir(), ext.isCheckForAbsolutePaths()), "lib");
         if( !libDir.exists() && !libDir.mkdirs() ){
             throw new GradleException("Unable to create app lib dir: " + libDir);
         }

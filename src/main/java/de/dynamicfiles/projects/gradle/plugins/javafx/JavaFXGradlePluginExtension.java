@@ -92,6 +92,7 @@ public class JavaFXGradlePluginExtension {
     private boolean skipDaemonModeCheck = false;
     private String alternativePathToJarFile = null;
     private boolean usePatchedJFXAntLib = true;
+    private boolean checkForAbsolutePaths = false;
 
     /*
         generated methods below
@@ -512,6 +513,14 @@ public class JavaFXGradlePluginExtension {
 
     public void setUsePatchedJFXAntLib(boolean usePatchedJFXAntLib) {
         this.usePatchedJFXAntLib = usePatchedJFXAntLib;
+    }
+
+    public boolean isCheckForAbsolutePaths() {
+        return checkForAbsolutePaths;
+    }
+
+    public void setCheckForAbsolutePaths(boolean checkForAbsolutePaths) {
+        this.checkForAbsolutePaths = checkForAbsolutePaths;
     }
 
 }

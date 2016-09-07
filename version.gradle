@@ -1,3 +1,3 @@
 gradle.ext {
-    currentPluginVersion = '8.6.1-SNAPSHOT'
+    currentPluginVersion = '8.7.0-SNAPSHOT'
 }

@@ -15,6 +15,7 @@
  */
 package de.dynamicfiles.projects.gradle.plugins.javafx.tasks.workers;
 
+import de.dynamicfiles.projects.gradle.plugins.javafx.JavaFXGradlePluginExtension;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStream;
@@ -35,17 +36,17 @@ import org.gradle.api.logging.Logger;
  */
 public abstract class JfxAbstractWorker {
 
-    protected void addDeployDirToSystemClassloader(Project project, String deployDir) {
+    protected void addDeployDirToSystemClassloader(Project project, JavaFXGradlePluginExtension ext) {
         // add deployDir to system classpath
-        if( deployDir != null ){
+        if( ext.getDeployDir() != null ){
 
-            File targetDeployDir = new File(project.getProjectDir(), deployDir);
+            File targetDeployDir = getAbsoluteOrProjectRelativeFile(project, ext.getDeployDir(), ext.isCheckForAbsolutePaths());
             if( !targetDeployDir.exists() ){
                 project.getLogger().info("Adding 'deploy' directory wasn't successful, because it does not exist! (" + targetDeployDir.getAbsolutePath() + ").");
                 project.getLogger().info("You only need this directory when you want to override some resources.");
                 return;
             }
-            project.getLogger().info("Adding 'deploy' directory to classpath: " + deployDir);
+            project.getLogger().info("Adding 'deploy' directory to classpath: " + ext.getDeployDir());
             URLClassLoader sysloader = (URLClassLoader) this.getClass().getClassLoader();
             Class<URLClassLoader> sysclass = URLClassLoader.class;
             try{
@@ -100,5 +101,13 @@ public abstract class JfxAbstractWorker {
         String jdkPath = jrePath + File.separator + ".." + File.separator + "bin" + File.separator;
 
         return jdkPath;
+    }
+
+    protected File getAbsoluteOrProjectRelativeFile(Project project, String potentialAbsoluteFilePath, boolean checkForAbsolutePaths) {
+        File file = new File(potentialAbsoluteFilePath);
+        if( file.isAbsolute() && checkForAbsolutePaths ){
+            return file;
+        }
+        return new File(project.getProjectDir(), potentialAbsoluteFilePath);
     }
 }
