@@ -58,6 +58,7 @@ public class JavaFXGradlePluginExtension {
     private Map<String, String> bundleArguments = null;
     private String appName = null;
     private String additionalAppResources = null;
+    private String additionalBundlerResources = null;
     private List<Map<String, Object>> secondaryLaunchers = null;
     private List<Map<String, Object>> fileAssociations = null;
     private boolean skipNativeLauncherWorkaround124 = false;
@@ -303,6 +304,14 @@ public class JavaFXGradlePluginExtension {
 
     public void setAdditionalAppResources(String additionalAppResources) {
         this.additionalAppResources = additionalAppResources;
+    }
+
+    public String getAdditionalBundlerResources() {
+        return additionalBundlerResources;
+    }
+
+    public void setAdditionalBundlerResources(String additionalBundlerResources) {
+        this.additionalBundlerResources = additionalBundlerResources;
     }
 
     public List<Map<String, Object>> getSecondaryLaunchers() {
