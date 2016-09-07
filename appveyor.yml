@@ -11,7 +11,7 @@ branches:
 skip_tags: true
 
 build_script:
-  - gradlew.bat assemble --info --no-daemon
+  - gradlew.bat clean assemble install --info --no-daemon
 
 test_script:
   - gradlew.bat check --info --no-daemon
