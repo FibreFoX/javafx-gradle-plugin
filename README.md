@@ -238,6 +238,7 @@ New:
 Bugfixes:
 * made it possible to specify absolute paths for all path-properties, fixes issue #36
 * reverted the idea of registering the real tasks after project-evaluation, only add ant-javafx.jar after project-evaluation (fixes issue #31)
+* adjusted CI-files for AppVeyor and TravisCI to handle functional tests
 
 Enhancements:
 * implemented some functional tests, mostly using the example-projects as test-projects (running against Gradle 2.10 and Gradle 3.0)

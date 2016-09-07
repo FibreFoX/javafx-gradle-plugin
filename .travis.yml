@@ -11,6 +11,8 @@ jdk:
 before_install:
   - chmod +x gradlew
 
+script: ./gradlew clean install
+
 branches:
   only:
   - master
