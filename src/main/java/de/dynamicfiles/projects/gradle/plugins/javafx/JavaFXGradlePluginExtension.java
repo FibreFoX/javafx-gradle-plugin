@@ -42,6 +42,7 @@ public class JavaFXGradlePluginExtension {
     private boolean addPackagerJar = true;
     // private List<Dependency> classpathExcludes = new ArrayList<>();
     // private boolean classpathExcludesTransient = true;
+    private boolean copyAdditionalAppResourcesToJar = false;
 
     // NativeMojo
     private String identifier = null;
@@ -192,6 +193,14 @@ public class JavaFXGradlePluginExtension {
 
     public void setAddPackagerJar(boolean addPackagerJar) {
         this.addPackagerJar = addPackagerJar;
+    }
+
+    public boolean isCopyAdditionalAppResourcesToJar() {
+        return copyAdditionalAppResourcesToJar;
+    }
+
+    public void setCopyAdditionalAppResourcesToJar(boolean copyAdditionalAppResourcesToJar) {
+        this.copyAdditionalAppResourcesToJar = copyAdditionalAppResourcesToJar;
     }
 
     public String getIdentifier() {
