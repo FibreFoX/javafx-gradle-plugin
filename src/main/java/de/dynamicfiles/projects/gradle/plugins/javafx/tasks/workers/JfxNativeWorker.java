@@ -121,35 +121,7 @@ public class JfxNativeWorker extends JfxAbstractWorker {
                     try{
                         Path targetFolder = getAbsoluteOrProjectRelativeFile(project, ext.getJfxAppOutputDir(), ext.isCheckForAbsolutePaths()).toPath();
                         Path sourceFolder = appResources.toPath();
-                        Files.walkFileTree(sourceFolder, new FileVisitor<Path>() {
-
-                            @Override
-                            public FileVisitResult preVisitDirectory(Path subfolder, BasicFileAttributes attrs) throws IOException {
-                                // do create subfolder (if needed)
-                                Files.createDirectories(targetFolder.resolve(sourceFolder.relativize(subfolder)));
-                                return FileVisitResult.CONTINUE;
-                            }
-
-                            @Override
-                            public FileVisitResult visitFile(Path sourceFile, BasicFileAttributes attrs) throws IOException {
-                                // do copy
-                                Files.copy(sourceFile, targetFolder.resolve(sourceFolder.relativize(sourceFile)), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES);
-                                return FileVisitResult.CONTINUE;
-                            }
-
-                            @Override
-                            public FileVisitResult visitFileFailed(Path source, IOException ioe) throws IOException {
-                                // don't fail, just inform user
-                                logger.warn(String.format("Couldn't copy additional app resource %s with reason %s", source.toString(), ioe.getLocalizedMessage()));
-                                return FileVisitResult.CONTINUE;
-                            }
-
-                            @Override
-                            public FileVisitResult postVisitDirectory(Path source, IOException ioe) throws IOException {
-                                // nothing to do here
-                                return FileVisitResult.CONTINUE;
-                            }
-                        });
+                        copyRecursive(sourceFolder, targetFolder, project.getLogger());
                     } catch(IOException e){
                         logger.warn("Couldn't copy additional application resource-file(s).", e);
                     }
@@ -340,37 +312,7 @@ public class JfxNativeWorker extends JfxAbstractWorker {
                             Path targetFolder = bundlerImageRoot.toPath();
                             Path sourceFolder = getAbsoluteOrProjectRelativeFile(project, ext.getAdditionalBundlerResources(), ext.isCheckForAbsolutePaths()).toPath();
                             logger.info("Copying additional bundler resources into: " + targetFolder.toFile().getAbsolutePath());
-                            Files.walkFileTree(sourceFolder, new FileVisitor<Path>() {
-
-                                @Override
-                                public FileVisitResult preVisitDirectory(Path subfolder, BasicFileAttributes attrs) throws IOException {
-                                    // do create subfolder (if needed)
-                                    Files.createDirectories(targetFolder.resolve(sourceFolder.relativize(subfolder)));
-                                    return FileVisitResult.CONTINUE;
-                                }
-
-                                @Override
-                                public FileVisitResult visitFile(Path sourceFile, BasicFileAttributes attrs) throws IOException {
-                                    // do copy
-                                    Files.copy(sourceFile, targetFolder.resolve(sourceFolder.relativize(sourceFile)), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES);
-                                    // do cleanup, because otherwise normal bundler cleanup would not work
-                                    targetFolder.resolve(sourceFolder.relativize(sourceFile)).toFile().deleteOnExit();
-                                    return FileVisitResult.CONTINUE;
-                                }
-
-                                @Override
-                                public FileVisitResult visitFileFailed(Path source, IOException ioe) throws IOException {
-                                    // don't fail, just inform user
-                                    logger.warn(String.format("Couldn't copy additional bundler resource %s with reason %s", source.toString(), ioe.getLocalizedMessage()));
-                                    return FileVisitResult.CONTINUE;
-                                }
-
-                                @Override
-                                public FileVisitResult postVisitDirectory(Path source, IOException ioe) throws IOException {
-                                    // nothing to do here
-                                    return FileVisitResult.CONTINUE;
-                                }
-                            });
+                            copyRecursive(sourceFolder, targetFolder, project.getLogger());
                         } catch(IOException e){
                             logger.warn("Couldn't copy additional bundler resource-file(s).", e);
                         }
