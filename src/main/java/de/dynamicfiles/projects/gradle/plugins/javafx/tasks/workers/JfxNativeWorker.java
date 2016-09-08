@@ -334,10 +334,12 @@ public class JfxNativeWorker extends JfxAbstractWorker {
                     // fixes "Make it possible to have additional resources for bundlers"
                     // see https://github.com/FibreFoX/javafx-gradle-plugin/issues/38
                     if( ext.getAdditionalBundlerResources() != null ){
+                        logger.info("Found additional bundler resources, trying to copy all files into build root.");
                         File bundlerImageRoot = AbstractBundler.IMAGES_ROOT.fetchFrom(paramsToBundleWith);
                         try{
                             Path targetFolder = bundlerImageRoot.toPath();
                             Path sourceFolder = getAbsoluteOrProjectRelativeFile(project, ext.getAdditionalBundlerResources(), ext.isCheckForAbsolutePaths()).toPath();
+                            logger.info("Copying additional bundler resources into: " + targetFolder.toFile().getAbsolutePath());
                             Files.walkFileTree(sourceFolder, new FileVisitor<Path>() {
 
                                 @Override
