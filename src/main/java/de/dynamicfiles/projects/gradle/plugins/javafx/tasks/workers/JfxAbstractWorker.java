@@ -18,6 +18,7 @@ package de.dynamicfiles.projects.gradle.plugins.javafx.tasks.workers;
 import de.dynamicfiles.projects.gradle.plugins.javafx.JavaFXGradlePluginExtension;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.InvocationTargetException;
@@ -25,6 +26,12 @@ import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.file.FileVisitResult;
+import java.nio.file.FileVisitor;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.function.Consumer;
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
@@ -109,5 +116,37 @@ public abstract class JfxAbstractWorker {
             return file;
         }
         return new File(project.getProjectDir(), potentialAbsoluteFilePath);
+    }
+
+    protected void copyRecursive(Path sourceFolder, Path targetFolder, Logger logger) throws IOException {
+        Files.walkFileTree(sourceFolder, new FileVisitor<Path>() {
+
+            @Override
+            public FileVisitResult preVisitDirectory(Path subfolder, BasicFileAttributes attrs) throws IOException {
+                // do create subfolder (if needed)
+                Files.createDirectories(targetFolder.resolve(sourceFolder.relativize(subfolder)));
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult visitFile(Path sourceFile, BasicFileAttributes attrs) throws IOException {
+                // do copy, and replace, as the resource might already be existing
+                Files.copy(sourceFile, targetFolder.resolve(sourceFolder.relativize(sourceFile)), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES);
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult visitFileFailed(Path source, IOException ioe) throws IOException {
+                // don't fail, just inform user
+                logger.warn(String.format("Couldn't copy resource %s with reason %s", source.toString(), ioe.getLocalizedMessage()));
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult postVisitDirectory(Path source, IOException ioe) throws IOException {
+                // nothing to do here
+                return FileVisitResult.CONTINUE;
+            }
+        });
     }
 }
