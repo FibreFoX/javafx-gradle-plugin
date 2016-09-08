@@ -235,6 +235,7 @@ upcoming Version 8.7.0 (??-2016)
 New:
 * added `checkForAbsolutePaths`-property to enable absolute paths for all path-properties (it defaults to `false` to behave like before)
 * added `additionalBundlerResources` for being able to have additional files available to the used bundler
+* added feature for copying additionalAppResources to `build/jfx/app` when calling `jfxJar` and `jfxRun`, making it possible to have all that files available (like native files being required to not reside in the jar-files) (issue #39)
 
 Bugfixes:
 * made it possible to specify absolute paths for all path-properties, fixes issue #36
