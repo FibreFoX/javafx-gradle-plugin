@@ -31,6 +31,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
@@ -133,17 +134,30 @@ public class JfxJarWorker extends JfxAbstractWorker {
             manifestAttributes.put("Permissions", "all-permissions");
         }
 
-        // TODO
-        if( isGradleDaemonMode() ){
-            // redirectIO(p, project.getLogger());
-        }
-
         PackagerLib packagerLib = new PackagerLib();
         try{
             project.getLogger().info("Running packager...");
             packagerLib.packageAsJar(createJarParams);
         } catch(PackagerException ex){
             throw new GradleException("Unable to build JFX JAR for application", ex);
+        }
+
+        if( ext.isCopyAdditionalAppResourcesToJar() ){
+            Optional.ofNullable(ext.getAdditionalAppResources())
+                    .filter(appRessourcesString -> appRessourcesString != null)
+                    .map(appRessourcesString -> getAbsoluteOrProjectRelativeFile(project, appRessourcesString, ext.isCheckForAbsolutePaths()))
+                    .filter(File::exists)
+                    .ifPresent(appResources -> {
+                        project.getLogger().info("Copying additional app ressources...");
+
+                        try{
+                            Path targetFolder = getAbsoluteOrProjectRelativeFile(project, ext.getJfxAppOutputDir(), ext.isCheckForAbsolutePaths()).toPath();
+                            Path sourceFolder = appResources.toPath();
+                            copyRecursive(sourceFolder, targetFolder, project.getLogger());
+                        } catch(IOException e){
+                            project.getLogger().warn("Couldn't copy additional application resource-file(s).", e);
+                        }
+                    });
         }
 
         // cleanup
@@ -216,4 +230,5 @@ public class JfxJarWorker extends JfxAbstractWorker {
             }
         });
     }
+
 }
