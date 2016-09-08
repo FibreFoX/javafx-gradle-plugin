@@ -22,4 +22,5 @@ jfx {
     mainClass = 'de.dynamicfiles.projects.gradle.example.MainClass'
     vendor = 'YourName'
     additionalAppResources = 'src/main/additional-files'
+    // copyAdditionalAppResourcesToJar = true
 }
