@@ -1,6 +1,33 @@
 Release Notes
 =============
 
+# Version 8.7.0 (09-September-2016)
+
+New:
+* added `checkForAbsolutePaths`-property to enable absolute paths for all path-properties (it defaults to `false` to behave like before)
+* added `additionalBundlerResources` for being able to have additional files available to the used bundler
+* added feature for copying additionalAppResources to `build/jfx/app` when calling `jfxJar` and `jfxRun`, making it possible to have all that files available (like native files being required to not reside in the jar-files) by setting `copyAdditionalAppResourcesToJar = true` (issue #39)
+
+Bugfixes:
+* made it possible to specify absolute paths for all path-properties, fixes issue #36
+* reverted the idea of registering the real tasks after project-evaluation, only add ant-javafx.jar after project-evaluation (fixes issue #31)
+* adjusted CI-files for AppVeyor and TravisCI to handle functional tests
+* fixed possible file-handler leak (unreported)
+
+Changes:
+* removed the `skipDaemonModeCheck`-property, please remove this from your configuration/buildscript
+
+Enhancements:
+* implemented some functional tests, mostly using the example-projects as test-projects (running against Gradle 2.10 and Gradle 3.0)
+* added example project: windows installer with license
+* added example project: debian installer with license
+* added example project: adjusted launcher-icon
+* added example project: additional bundler-files
+* extracted plugin-version into separated file to have example-projects working at their place without having the need to adjust these version-numbers on every release
+* refactored a bit to have cleaner code
+
+
+
 # Version 8.6.0 (31-August-2016)
 
 New:

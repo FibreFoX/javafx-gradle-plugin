@@ -30,7 +30,7 @@ Please adjust your parameters accordingly:
 ```groovy
 buildscript {
     dependencies {
-        classpath group: 'de.dynamicfiles.projects.gradle.plugins', name: 'javafx-gradle-plugin', version: '8.6.0'
+        classpath group: 'de.dynamicfiles.projects.gradle.plugins', name: 'javafx-gradle-plugin', version: '8.7.0'
     }
     
     repositories {
@@ -60,6 +60,7 @@ apply plugin: 'javafx-gradle-plugin'
 // you won't need them all
 
 // configure javafx-gradle-plugin
+// for all available settings please look at the class "JavaFXGradlePluginExtension"
 jfx {
     verbose = true
     mainClass = "com.something.cool.MainApp"
@@ -75,6 +76,7 @@ jfx {
     allPermissions = false
     manifestAttributes = null // Map<String, String>
     addPackagerJar = true
+    copyAdditionalAppResourcesToJar = false
 
     // gradle jfxNative
     identifier = null  // String - setting this for windows-bundlers makes it possible to generate upgradeable installers (using same GUID)
@@ -93,6 +95,7 @@ jfx {
         runtime: null
     ]
     appName = "project" // this is used for files below "src/main/deploy", e.g. "src/main/deploy/windows/project.ico"
+    additionalBundlerResources = null // path to some additional resources for the bundlers when creating application-bundle
     additionalAppResources = null // path to some additional resources when creating application-bundle
     secondaryLaunchers = [[appName:"somethingDifferent"], [appName:"somethingDifferent2"]]
     fileAssociations = null // List<Map<String, Object>>
@@ -116,6 +119,9 @@ jfx {
     // to disable patching of ant-javafx.jar, set this to false
     usePatchedJFXAntLib = true
     
+    // making it able to support absolute paths, defaults to "false" for maintaining old behaviour
+    checkForAbsolutePaths = false
+    
     // gradle jfxGenerateKeyStore
     keyStore = "src/main/deploy/keystore.jks"
     keyStoreAlias = "myalias"
@@ -138,7 +144,7 @@ Minimal setup of `build.gradle`
 ```groovy
 buildscript {
     dependencies {
-        classpath group: 'de.dynamicfiles.projects.gradle.plugins', name: 'javafx-gradle-plugin', version: '8.6.0'
+        classpath group: 'de.dynamicfiles.projects.gradle.plugins', name: 'javafx-gradle-plugin', version: '8.7.0'
     }
     repositories {
         mavenLocal()
@@ -182,7 +188,7 @@ When you report a bug and this got worked around, you might be able to have acce
 ```groovy
 buildscript {
     dependencies {
-        classpath group: 'de.dynamicfiles.projects.gradle.plugins', name: 'javafx-gradle-plugin', version: '8.6.0-SNAPSHOT'
+        classpath group: 'de.dynamicfiles.projects.gradle.plugins', name: 'javafx-gradle-plugin', version: '8.7.0-SNAPSHOT'
     }
     repositories {
         mavenLocal()
@@ -203,46 +209,36 @@ Please look at the [examples-folder](/examples) to see some projects in action.
 Last Release Notes
 ==================
 
-**Version 8.6.0 (31-August-2016)**
+**Version 8.7.0 (09-September-2016)**
 
 New:
-* added `alternativePathToJarFile`-property to specify the jar-file which gets used for javafx-jar-transformation
-* added `usePatchedJFXAntLib`-property to disable gradle daemon workaround of the JDK-bug (which might be required when patching does result in crashing the JVM)
-* added `useEnvironmentRelativeExecutables`-property to change the executables being used from the JDK instead of environment-relative (which could differ due to multiple local java-installations)
-* added possibility to adjust java-command used for `jfxRun`-task: it is now possible to pass parameters to your jfx-application
-* added possibility to adjust java-command used for `jfxRun`-task: it is now possible to pass parameters to the java-executable, e.g. to specify some javassist-module or other JVM-related stuff (like Xmx or other funny things)
+* added `checkForAbsolutePaths`-property to enable absolute paths for all path-properties (it defaults to `false` to behave like before)
+* added `additionalBundlerResources` for being able to have additional files available to the used bundler
+* added feature for copying additionalAppResources to `build/jfx/app` when calling `jfxJar` and `jfxRun`, making it possible to have all that files available (like native files being required to not reside in the jar-files) by setting `copyAdditionalAppResourcesToJar = true` (issue #39)
 
 Bugfixes:
-* fixed issue #29 and #30 regarding stdout/stderr not printed when Gradle is in daemon mode (which is default for Gradle 3 now)
-* fixed issue #12 regarding gradle daemon mode: **IT IS NOW SUPPORTED**
+* made it possible to specify absolute paths for all path-properties, fixes issue #36
+* reverted the idea of registering the real tasks after project-evaluation, only add ant-javafx.jar after project-evaluation (fixes issue #31)
+* adjusted CI-files for AppVeyor and TravisCI to handle functional tests
+* fixed possible file-handler leak (unreported)
 
 Changes:
-* removed the usage of `skipDaemonModeCheck`-property, please remove this from your configuration/buildscript (will be removed in the next minor-release)
-* the javafx-gradle-plugin now requires ASM being present on classpath of the buildscript for being able to work around the JDK-bug (https://bugs.openjdk.java.net/browse/JDK-8148717)
+* removed the `skipDaemonModeCheck`-property, please remove this from your configuration/buildscript
 
 Enhancements:
-* fixed issue #26 by providing a way to specify jar-file used for javapackager
-* updated proguard example using new `alternativePathToJarFile`-property
-* updated README.md to show minimal setup and other stuff
+* implemented some functional tests, mostly using the example-projects as test-projects (running against Gradle 2.10 and Gradle 3.0)
+* added example project: windows installer with license
+* added example project: debian installer with license
+* added example project: adjusted launcher-icon
+* added example project: additional bundler-files
+* extracted plugin-version into separated file to have example-projects working at their place without having the need to adjust these version-numbers on every release
+* refactored a bit to have cleaner code
 
 
 
 (Not yet) Release(d) Notes
 ==========================
 
-upcoming Version 8.7.0 (??-2016)
+upcoming Version 8.7.1 (??-2016)
 
-New:
-* added `checkForAbsolutePaths`-property to enable absolute paths for all path-properties (it defaults to `false` to behave like before)
-* added `additionalBundlerResources` for being able to have additional files available to the used bundler
-* added feature for copying additionalAppResources to `build/jfx/app` when calling `jfxJar` and `jfxRun`, making it possible to have all that files available (like native files being required to not reside in the jar-files) (issue #39)
-
-Bugfixes:
-* made it possible to specify absolute paths for all path-properties, fixes issue #36
-* reverted the idea of registering the real tasks after project-evaluation, only add ant-javafx.jar after project-evaluation (fixes issue #31)
-* adjusted CI-files for AppVeyor and TravisCI to handle functional tests
-
-Enhancements:
-* implemented some functional tests, mostly using the example-projects as test-projects (running against Gradle 2.10 and Gradle 3.0)
-* added example project: windows installer with license
-* added example project: debian installer with license
+* nothing changed yet
