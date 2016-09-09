@@ -90,8 +90,6 @@ public class JavaFXGradlePluginExtension {
     private String runAppParameter = null;
 
     // generic settings (not present on javafx-maven-plugin)
-    @Deprecated
-    private boolean skipDaemonModeCheck = false;
     private String alternativePathToJarFile = null;
     private boolean usePatchedJFXAntLib = true;
     private boolean checkForAbsolutePaths = false;
@@ -505,16 +503,6 @@ public class JavaFXGradlePluginExtension {
 
     public void setRunAppParameter(String runAppParameter) {
         this.runAppParameter = runAppParameter;
-    }
-
-    @Deprecated
-    public boolean isSkipDaemonModeCheck() {
-        return skipDaemonModeCheck;
-    }
-
-    @Deprecated
-    public void setSkipDaemonModeCheck(boolean skipDaemonModeCheck) {
-        this.skipDaemonModeCheck = skipDaemonModeCheck;
     }
 
     public String getAlternativePathToJarFile() {
