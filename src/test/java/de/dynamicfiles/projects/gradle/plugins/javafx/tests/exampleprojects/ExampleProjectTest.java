@@ -62,8 +62,8 @@ public abstract class ExampleProjectTest {
             if( "apply from: '../../version.gradle'".equals(line.trim()) ){
                 return "";
             }
-            if( line.endsWith("version: \"${gradle.currentPluginVersion}\"") ){
-                return line.replace("version: \"${gradle.currentPluginVersion}\"", "version: '" + versionString + "'");
+            if( line.endsWith("version: \"${gradle.javafxGradlePluginVersion}\"") ){
+                return line.replace("version: \"${gradle.javafxGradlePluginVersion}\"", "version: '" + versionString + "'");
             }
             return line;
         }).collect(Collectors.toList()), StandardCharsets.UTF_8, StandardOpenOption.TRUNCATE_EXISTING);

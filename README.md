@@ -241,4 +241,5 @@ Enhancements:
 
 upcoming Version 8.7.1 (??-2016)
 
-* nothing changed yet
+Enhancements:
+* updated all example-projects to use a different variable-name of the "current" plugin-version

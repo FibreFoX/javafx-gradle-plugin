@@ -10,7 +10,7 @@ buildscript {
     }
     dependencies {
         // provides javafx-gradle-plugin
-        classpath group: 'de.dynamicfiles.projects.gradle.plugins', name: 'javafx-gradle-plugin', version: "${gradle.currentPluginVersion}"
+        classpath group: 'de.dynamicfiles.projects.gradle.plugins', name: 'javafx-gradle-plugin', version: "${gradle.javafxGradlePluginVersion}"
         // provides proguard.gradle.ProGuardTask (including all requirements)
         classpath 'net.sf.proguard:proguard-gradle:5.2.1'
     }
