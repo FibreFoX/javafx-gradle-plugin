@@ -324,6 +324,27 @@ public class JfxNativeWorker extends JfxAbstractWorker {
                             logger.warn("Couldn't copy additional bundler resource-file(s).", e);
                         }
                     }
+
+                    // check if we need to inform the user about low performance even on SSD
+                    // https://github.com/FibreFoX/javafx-gradle-plugin/issues/41
+                    if( System.getProperty("os.name").toLowerCase().startsWith("linux") && "deb".equals(b.getID()) ){
+                        File generationTarget = getAbsoluteOrProjectRelativeFile(project, ext.getNativeOutputDir(), ext.isCheckForAbsolutePaths());
+                        AtomicBoolean needsWarningAboutSlowPerformance = new AtomicBoolean(false);
+                        generationTarget.toPath().getFileSystem().getFileStores().forEach(store -> {
+                            if( "ext4".equals(store.type()) ){
+                                needsWarningAboutSlowPerformance.set(true);
+                            }
+                            if( "btrfs".equals(store.type()) ){
+                                needsWarningAboutSlowPerformance.set(true);
+                            }
+                        });
+                        if( needsWarningAboutSlowPerformance.get() ){
+                            logger.lifecycle("This bundler might take some while longer than expected.");
+                            logger.lifecycle("For details about this, please go to: https://wiki.debian.org/Teams/Dpkg/FAQ#Q:_Why_is_dpkg_so_slow_when_using_new_filesystems_such_as_btrfs_or_ext4.3F");
+                        }
+                    }
+
+                    // DO BUNDLE HERE ;) and don't get confused about all the other stuff
                     b.execute(paramsToBundleWith, getAbsoluteOrProjectRelativeFile(project, ext.getNativeOutputDir(), ext.isCheckForAbsolutePaths()));
 
                     // Workaround for "Native package for Ubuntu doesn't work"

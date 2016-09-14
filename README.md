@@ -243,3 +243,4 @@ upcoming Version 8.7.1 (??-2016)
 
 Enhancements:
 * updated all example-projects to use a different variable-name of the "current" plugin-version
+* added warning about slow performance (even on SSD) when having ext4/btrfs filesystems using "deb"-bundler
