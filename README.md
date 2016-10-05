@@ -239,12 +239,12 @@ Enhancements:
 (Not yet) Release(d) Notes
 ==========================
 
-upcoming Version 8.7.1 (??-2016)
+upcoming Version 8.7.1 (??-oct-2016) *(available as 8.7.1-SNAPSHOT)*
 
 Enhancements:
-* updated all example-projects to use a different variable-name of the "current" plugin-version
-* added warning about slow performance (even on SSD) when having ext4/btrfs filesystems using "deb"-bundler
-* added warning about missing "jnlp.outfile"-property inside bundleArguments when using JNLP-bundler
+* updated all example-projects to use a different variable-name of the "current" plugin-version (fixes issue #40)
+* added warning about slow performance (even on SSD) when having ext4/btrfs filesystems using "deb"-bundler (fixes issue #41)
+* added warning about missing "jnlp.outfile"-property inside bundleArguments when using JNLP-bundler (from issue #42)
 
 Changes:
 * reimplemented `additionalBundlerResources`, now searching for folders with the name of the used bundler, makes it possible to adjust nearly all bundlers now
