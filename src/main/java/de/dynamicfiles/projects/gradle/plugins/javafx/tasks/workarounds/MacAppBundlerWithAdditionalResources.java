@@ -226,7 +226,7 @@ public class MacAppBundlerWithAdditionalResources extends MacAppBundler {
         return rootDirectory;
     }
 
-    private void doOutputFolderChecks(File outputDirectory) throws RuntimeException {
+    private void doOutputFolderChecks(File outputDirectory) {
         if( !outputDirectory.isDirectory() && !outputDirectory.mkdirs() ){
             throw new RuntimeException(MessageFormat.format(I18N.getString("error.cannot-create-output-dir"), outputDirectory.getAbsolutePath()));
         }
