@@ -24,9 +24,6 @@ import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.UnsupportedPlatformException;
 import com.oracle.tools.packager.linux.LinuxDebBundler;
 import com.oracle.tools.packager.linux.LinuxRpmBundler;
-import com.oracle.tools.packager.mac.MacAppStoreBundler;
-import com.oracle.tools.packager.mac.MacDmgBundler;
-import com.oracle.tools.packager.mac.MacPkgBundler;
 import com.oracle.tools.packager.windows.WinExeBundler;
 import com.oracle.tools.packager.windows.WinMsiBundler;
 import com.sun.javafx.tools.packager.PackagerException;
@@ -36,6 +33,7 @@ import de.dynamicfiles.projects.gradle.plugins.javafx.JavaFXGradlePluginExtensio
 import de.dynamicfiles.projects.gradle.plugins.javafx.dto.FileAssociation;
 import de.dynamicfiles.projects.gradle.plugins.javafx.dto.NativeLauncher;
 import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.internal.Workarounds;
+import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.workarounds.MacAppBundlerWithAdditionalResources;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -64,6 +62,9 @@ public class JfxNativeWorker extends JfxAbstractWorker {
 
     private static final String JNLP_JAR_PATTERN = "(.*)href=(\".*?\")(.*)size=(\".*?\")(.*)";
 
+    private static final String CFG_WORKAROUND_MARKER = "cfgWorkaroundMarker";
+    private static final String CFG_WORKAROUND_DONE_MARKER = CFG_WORKAROUND_MARKER + ".done";
+
     private Workarounds workarounds = null;
 
     public void jfxnative(Project project) {
@@ -71,14 +72,14 @@ public class JfxNativeWorker extends JfxAbstractWorker {
         JavaFXGradlePluginExtension ext = project.getExtensions().getByType(JavaFXGradlePluginExtension.class);
         addDeployDirToSystemClassloader(project, ext);
 
-        String bundler = ext.getBundler();
+        String requestedBundler = ext.getBundler();
         final Logger logger = project.getLogger();
 
         workarounds = new Workarounds(getAbsoluteOrProjectRelativeFile(project, ext.getNativeOutputDir(), ext.isCheckForAbsolutePaths()), logger);
 
         Map<String, ? super Object> params = new HashMap<>();
 
-        logger.info("Creating parameter-map for bundler '" + bundler + "'");
+        logger.info("Creating parameter-map for bundler '" + requestedBundler + "'");
 
         params.put(StandardBundlerParam.VERBOSE.getID(), ext.isVerbose());
         Optional.ofNullable(ext.getIdentifier()).ifPresent(id -> {
@@ -254,9 +255,15 @@ public class JfxNativeWorker extends JfxAbstractWorker {
         //
         // run bundlers
         Bundlers bundlers = Bundlers.createBundlersInstance(); // service discovery?
+        Collection<Bundler> loadedBundlers = bundlers.getBundlers();
+
+        // makes it possible to kick out all default bundlers
+        if( ext.isOnlyCustomBundlers() ){
+            loadedBundlers.clear();
+        }
 
         // don't allow to overwrite existing bundler IDs
-        List<String> existingBundlerIds = bundlers.getBundlers().stream().map(existingBundler -> existingBundler.getID()).collect(Collectors.toList());
+        List<String> existingBundlerIds = loadedBundlers.stream().map(existingBundler -> existingBundler.getID()).collect(Collectors.toList());
 
         Optional.ofNullable(ext.getCustomBundlers()).ifPresent(customBundlerList -> {
             customBundlerList.stream().map(customBundlerClassName -> {
@@ -273,243 +280,313 @@ public class JfxNativeWorker extends JfxAbstractWorker {
                 }
                 return null;
             }).filter(customBundler -> customBundler != null).forEach(customBundler -> {
-                bundlers.loadBundler(customBundler);
+                if( ext.isOnlyCustomBundlers() ){
+                    loadedBundlers.add(customBundler);
+                } else {
+                    bundlers.loadBundler(customBundler);
+                }
             });
         });
 
-        final String cfgWorkaround205Marker = "cfgWorkaround205Marker";
-        final String cfgWorkaround205DoneMarker = cfgWorkaround205Marker + ".done";
         boolean foundBundler = false;
 
-        for( Bundler b : bundlers.getBundlers() ){
-            boolean runBundler = true;
-            String bundlerID = b.getID();
-            if( bundler != null && !"ALL".equalsIgnoreCase(bundler) && !bundler.equalsIgnoreCase(bundlerID) ){
-                // this is not the specified bundler
-                runBundler = false;
-            }
+        // the new feature for only using custom bundlers made it necessary to check for empty bundlers list
+        if( loadedBundlers.isEmpty() ){
+            throw new GradleException("There were no bundlers registered. Please make sure to add your custom bundlers as dependency to the bundlescript.");
+        }
 
-            // Workaround for native installer bundle not creating working executable native launcher
-            // (this is a comeback of issue 124)
-            // https://github.com/javafx-maven-plugin/javafx-maven-plugin/issues/205
-            // do run application bundler and put the cfg-file to application resources
-            if( System.getProperty("os.name").toLowerCase().startsWith("linux") ){
-                if( workarounds.isWorkaroundForBug205Needed() ){
-                    // check if special conditions for this are met (not jnlp, but not linux.app too, because there another workaround already works)
-                    if( !"jnlp".equalsIgnoreCase(bundler) && !"linux.app".equalsIgnoreCase(bundler) && "linux.app".equalsIgnoreCase(bundlerID) ){
-                        if( !ext.isSkipNativeLauncherWorkaround205() ){
-                            logger.info("Detected linux application bundler needs to run before installer bundlers are executed.");
-                            runBundler = true;
-                            params.put(cfgWorkaround205Marker, "true");
-                        } else {
-                            logger.info("Skipped workaround for native linux installer bundlers.");
-                        }
-                    }
-                }
-            }
-            if( !runBundler ){
+        for( Bundler b : loadedBundlers ){
+            String currentRunningBundlerID = b.getID();
+
+            if( !shouldBundlerRun(requestedBundler, currentRunningBundlerID, ext, logger, params) ){
                 continue;
             }
+
             foundBundler = true;
 
             try{
-                Map<String, ? super Object> paramsToBundleWith = new HashMap<>(params);
-                if( b.validate(paramsToBundleWith) ){
-
-                    // copy all files every time a bundler runs, because they might cleanup their folders,
-                    // but user might have extend existing bundler using same foldername (which would end up deleted/cleaned up)
-                    // fixes "Make it possible to have additional resources for bundlers"
-                    // see https://github.com/FibreFoX/javafx-gradle-plugin/issues/38
+                // special mac-specific bunder
+                if( !System.getProperty("os.name").toLowerCase().contains("os x") ){
+                    // only when required and not opted out
                     if( ext.getAdditionalBundlerResources() != null ){
-                        // keep previous behaviour
-                        logger.info("Found additional bundler resources, trying to copy all files into build root.");
-
-                        Path additionalBundlerResources = getAbsoluteOrProjectRelativeFile(project, ext.getAdditionalBundlerResources(), ext.isCheckForAbsolutePaths()).toPath();
-                        Path resolvedBundlerFolder = additionalBundlerResources.resolve(bundlerID);
-
-                        File bundlerImageRoot = AbstractBundler.IMAGES_ROOT.fetchFrom(paramsToBundleWith);
-                        Path targetFolder = bundlerImageRoot.toPath();
-                        Path sourceFolder = additionalBundlerResources;
-                        boolean skipCopyAdditionalBundlerResources = false;
-
-                        // new behaviour, use bundler-name as folder-name
-                        if( Files.exists(resolvedBundlerFolder) ){
-                            logger.info("Found additional bundler resources for bundler " + bundlerID);
-                            sourceFolder = resolvedBundlerFolder;
-                            // change behaviour to have more control for all bundlers being inside JDK
-                            switch(bundlerID) {
-                                case "windows.app":
-                                    // no copy required, as we already have "additionalAppResources"
-                                    skipCopyAdditionalBundlerResources = true;
-                                    break;
-                                case "exe":
-                                    File exeBundlerFolder = WinExeBundler.EXE_IMAGE_DIR.fetchFrom(paramsToBundleWith);
-                                    targetFolder = exeBundlerFolder.toPath();
-                                    break;
-                                case "msi":
-                                    File msiBundlerFolder = WinMsiBundler.MSI_IMAGE_DIR.fetchFrom(paramsToBundleWith);
-                                    targetFolder = msiBundlerFolder.toPath();
-                                    break;
-                                case "windows.service":
-                                    // no copy required, as we already have "additionalAppResources"
-                                    skipCopyAdditionalBundlerResources = true;
-                                    break;
-                                case "mac.app":
-                                    // no copy required, as we already have "additionalAppResources"
-                                    skipCopyAdditionalBundlerResources = true;
-                                    break;
-                                case "mac.appStore":
-                                    File macApstoreBundlerFolder = ((MacAppStoreBundler) b).APP_IMAGE_BUILD_ROOT.fetchFrom(paramsToBundleWith);
-                                    targetFolder = macApstoreBundlerFolder.toPath();
-                                    break;
-                                case "mac.daemon":
-                                    // this bundler just deletes everything ... it has no bundlerRoot
-                                    logger.warn("The bundler with ID 'mac.daemon' is not supported, as that bundler does not provide any way to copy additional bundler-files.");
-                                    skipCopyAdditionalBundlerResources = true;
-                                    break;
-                                case "dmg":
-                                    File macDmgBundlerFolder = ((MacDmgBundler) b).APP_IMAGE_BUILD_ROOT.fetchFrom(paramsToBundleWith);
-                                    targetFolder = macDmgBundlerFolder.toPath();
-                                    break;
-                                case "pkg":
-                                    File macPkgBundlerFolder = ((MacPkgBundler) b).DAEMON_IMAGE_BUILD_ROOT.fetchFrom(paramsToBundleWith);
-                                    targetFolder = macPkgBundlerFolder.toPath();
-                                    break;
-                                case "linux.app":
-                                    // no copy required, as we already have "additionalAppResources"
-                                    skipCopyAdditionalBundlerResources = true;
-                                    break;
-                                case "deb":
-                                    File linuxDebBundlerFolder = LinuxDebBundler.DEB_IMAGE_DIR.fetchFrom(paramsToBundleWith);
-                                    targetFolder = linuxDebBundlerFolder.toPath();
-                                    break;
-                                case "rpm":
-                                    File linuxRpmBundlerFolder = LinuxRpmBundler.RPM_IMAGE_DIR.fetchFrom(paramsToBundleWith);
-                                    targetFolder = linuxRpmBundlerFolder.toPath();
-                                    break;
-                                default:
-                                    logger.warn("Unknown bundler-ID found, copying from root of additionalBundlerResources into IMAGES_ROOT.");
-                                    sourceFolder = additionalBundlerResources;
-                                    break;
-                            }
-                        }
-                        if( !skipCopyAdditionalBundlerResources ){
-                            try{
-                                logger.info("Copying additional bundler resources into: " + targetFolder.toFile().getAbsolutePath());
-                                copyRecursive(sourceFolder, targetFolder, project.getLogger());
-                            } catch(IOException e){
-                                logger.warn("Couldn't copy additional bundler resource-file(s).", e);
+                        if( !ext.isSkipMacBundlerWorkaround() ){
+                            if( "mac.app".equals(currentRunningBundlerID) ){
+                                // replace current running bundler with our own implementation
+                                b = new MacAppBundlerWithAdditionalResources();
+                                params.put("mac.app.bundler", b);
+                                params.put(MacAppBundlerWithAdditionalResources.ADDITIONAL_BUNDLER_RESOURCES.getID(), getAbsoluteOrProjectRelativeFile(project, ext.getAdditionalBundlerResources(), ext.isCheckForAbsolutePaths()));
                             }
                         } else {
-                            logger.info("Skipped copying additional bundler resources, mostly because this bundler does not need them. You might want to use additionalAppResources.");
-                        }
-
-                    }
-
-                    // check if we need to inform the user about low performance even on SSD
-                    // https://github.com/FibreFoX/javafx-gradle-plugin/issues/41
-                    if( System.getProperty("os.name").toLowerCase().startsWith("linux") && "deb".equals(bundlerID) ){
-                        File generationTarget = getAbsoluteOrProjectRelativeFile(project, ext.getNativeOutputDir(), ext.isCheckForAbsolutePaths());
-                        AtomicBoolean needsWarningAboutSlowPerformance = new AtomicBoolean(false);
-                        generationTarget.toPath().getFileSystem().getFileStores().forEach(store -> {
-                            if( "ext4".equals(store.type()) ){
-                                needsWarningAboutSlowPerformance.set(true);
-                            }
-                            if( "btrfs".equals(store.type()) ){
-                                needsWarningAboutSlowPerformance.set(true);
-                            }
-                        });
-                        if( needsWarningAboutSlowPerformance.get() ){
-                            logger.lifecycle("This bundler might take some while longer than expected.");
-                            logger.lifecycle("For details about this, please go to: https://wiki.debian.org/Teams/Dpkg/FAQ#Q:_Why_is_dpkg_so_slow_when_using_new_filesystems_such_as_btrfs_or_ext4.3F");
+                            logger.info("Skipping replacement of the 'mac.app'-bundler. Please make sure you know what you are doing");
                         }
                     }
+                }
+
+                Map<String, ? super Object> paramsToBundleWith = new HashMap<>(params);
+
+                if( b.validate(paramsToBundleWith) ){
+
+                    doPrepareBeforeBundling(ext, project, currentRunningBundlerID, logger, paramsToBundleWith);
 
                     // "jnlp bundler doesn't produce jnlp file and doesn't log any error/warning"
                     // https://github.com/FibreFoX/javafx-gradle-plugin/issues/42
                     // the new jnlp-bundler does not work like other bundlers, you have to provide some bundleArguments-entry :(
-                    if( "jnlp".equals(bundlerID) && !paramsToBundleWith.containsKey("jnlp.outfile") ){
-                        logger.warn("You missed to specify some bundleArguments-entry, please set 'jnlp.outfile', e.g. using appName.");
-                        continue;
+                    if( "jnlp".equals(currentRunningBundlerID) && !paramsToBundleWith.containsKey("jnlp.outfile") ){
+                        if( ext.isFailOnError() ){
+                            throw new GradleException("You missed to specify some bundleArguments-entry, please set 'jnlp.outfile', e.g. using appName.");
+                        } else {
+                            logger.warn("You missed to specify some bundleArguments-entry, please set 'jnlp.outfile', e.g. using appName.");
+                            continue;
+                        }
                     }
 
                     // DO BUNDLE HERE ;) and don't get confused about all the other stuff
                     b.execute(paramsToBundleWith, getAbsoluteOrProjectRelativeFile(project, ext.getNativeOutputDir(), ext.isCheckForAbsolutePaths()));
 
-                    // Workaround for "Native package for Ubuntu doesn't work"
-                    // https://github.com/javafx-maven-plugin/javafx-maven-plugin/issues/124
-                    // real bug: linux-launcher from oracle-jdk starting from 1.8.0u40 logic to determine .cfg-filename
-                    if( workarounds.isWorkaroundForBug124Needed() ){
-                        if( "linux.app".equals(bundlerID) ){
-                            logger.info("Applying workaround for oracle-jdk-bug since 1.8.0u40 regarding native linux launcher(s).");
-                            if( !ext.isSkipNativeLauncherWorkaround124() ){
-                                List<NativeLauncher> nativeLaunchers = new ArrayList<>();
-
-                                // bugfix for #24 "NullPointerException on linux without secondary launchers"
-                                Optional.ofNullable(ext.getSecondaryLaunchers()).ifPresent(launchers -> {
-                                    nativeLaunchers.addAll(launchers.stream().map(launcherMap -> getNativeLauncher(launcherMap)).collect(Collectors.toList()));
-                                });
-
-                                workarounds.applyWorkaround124(appName, nativeLaunchers);
-                                // only apply workaround for issue 205 when having workaround for issue 124 active
-                                if( Boolean.parseBoolean(String.valueOf(params.get(cfgWorkaround205Marker))) && !Boolean.parseBoolean((String) params.get(cfgWorkaround205DoneMarker)) ){
-                                    logger.info("Preparing workaround for oracle-jdk-bug since 1.8.0u40 regarding native linux launcher(s) inside native linux installers.");
-                                    workarounds.applyWorkaround205(appName, nativeLaunchers, params);
-                                    params.put(cfgWorkaround205DoneMarker, "true");
-                                }
-                            } else {
-                                logger.info("Skipped workaround for native linux launcher(s).");
-                            }
-                        }
-                    }
-
-                    if( "jnlp".equals(bundlerID) ){
-                        if( workarounds.isWorkaroundForBug182Needed() ){
-                            // Workaround for "JNLP-generation: path for dependency-lib on windows with backslash"
-                            // https://github.com/javafx-maven-plugin/javafx-maven-plugin/issues/182
-                            // jnlp-bundler uses RelativeFileSet, and generates system-dependent dividers (\ on windows, / on others)
-                            logger.info("Applying workaround for oracle-jdk-bug since 1.8.0u60 regarding jar-path inside generated JNLP-files.");
-                            if( !ext.isSkipJNLPRessourcePathWorkaround182() ){
-                                workarounds.fixPathsInsideJNLPFiles();
-                            } else {
-                                logger.info("Skipped workaround for jar-paths jar-path inside generated JNLP-files.");
-                            }
-                        }
-
-                        // Do sign generated jar-files by calling the packager (this might change in the future,
-                        // hopefully when oracle reworked the process inside the JNLP-bundler)
-                        // https://github.com/javafx-maven-plugin/javafx-maven-plugin/issues/185
-                        if( workarounds.isWorkaroundForBug185Needed(params) ){
-                            logger.info("Signing jar-files referenced inside generated JNLP-files.");
-                            if( !ext.isSkipSigningJarFilesJNLP185() ){
-                                // JavaFX signing using BLOB method will get dropped on JDK 9: "blob signing is going away in JDK9. "
-                                // https://bugs.openjdk.java.net/browse/JDK-8088866?focusedCommentId=13889898#comment-13889898
-                                if( !ext.isNoBlobSigning() ){
-                                    logger.info("Signing jar-files using BLOB method.");
-                                    signJarFilesUsingBlobSigning(project, ext);
-                                } else {
-                                    logger.info("Signing jar-files using jarsigner.");
-                                    signJarFiles(project, ext);
-                                }
-                                workarounds.applyWorkaround185(ext.isSkipSizeRecalculationForJNLP185());
-                            } else {
-                                logger.info("Skipped signing jar-files referenced inside JNLP-files.");
-                            }
-                        }
-                    }
-
+                    applyWorkaroundsAfterBundling(currentRunningBundlerID, logger, ext, appName, params, project);
                 }
             } catch(UnsupportedPlatformException e){
                 // quietly ignored
             } catch(ConfigException e){
-                logger.info("Skipping '" + b.getName() + "' because of configuration error '" + e.getMessage() + "'\nAdvice to fix: " + e.getAdvice());
+                if( ext.isFailOnError() ){
+                    throw new GradleException("Skipping '" + b.getName() + "' because of configuration error '" + e.getMessage() + "'\nAdvice to fix: " + e.getAdvice());
+                } else {
+                    logger.info("Skipping '" + b.getName() + "' because of configuration error '" + e.getMessage() + "'\nAdvice to fix: " + e.getAdvice());
+                }
             } catch(GradleException ex){
                 throw new GradleException("Got exception while executing bundler.", ex);
             }
         }
+
         if( !foundBundler ){
-            throw new GradleException("No bundler found for given name " + bundler + ". Please check your configuration.");
+            throw new GradleException("No bundler found for given name " + requestedBundler + ". Please check your configuration.");
         }
+    }
+
+    private void applyWorkaroundsAfterBundling(String currentRunningBundlerID, final Logger logger, JavaFXGradlePluginExtension ext, String appName, Map<String, ? super Object> params, Project project) {
+        // Workaround for "Native package for Ubuntu doesn't work"
+        // https://github.com/javafx-maven-plugin/javafx-maven-plugin/issues/124
+        // real bug: linux-launcher from oracle-jdk starting from 1.8.0u40 logic to determine .cfg-filename
+        if( workarounds.isWorkaroundForBug124Needed() ){
+            if( "linux.app".equals(currentRunningBundlerID) ){
+                logger.info("Applying workaround for oracle-jdk-bug since 1.8.0u40 regarding native linux launcher(s).");
+                if( !ext.isSkipNativeLauncherWorkaround124() ){
+                    List<NativeLauncher> nativeLaunchers = new ArrayList<>();
+
+                    // bugfix for #24 "NullPointerException on linux without secondary launchers"
+                    Optional.ofNullable(ext.getSecondaryLaunchers()).ifPresent(launchers -> {
+                        nativeLaunchers.addAll(launchers.stream().map(launcherMap -> getNativeLauncher(launcherMap)).collect(Collectors.toList()));
+                    });
+
+                    workarounds.applyWorkaround124(appName, nativeLaunchers);
+                    // only apply workaround for issue 205 when having workaround for issue 124 active
+                    if( Boolean.parseBoolean(String.valueOf(params.get(CFG_WORKAROUND_MARKER))) && !Boolean.parseBoolean((String) params.get(CFG_WORKAROUND_DONE_MARKER)) ){
+                        logger.info("Preparing workaround for oracle-jdk-bug since 1.8.0u40 regarding native linux launcher(s) inside native linux installers.");
+                        workarounds.applyWorkaround205(appName, nativeLaunchers, params);
+                        params.put(CFG_WORKAROUND_DONE_MARKER, "true");
+                    }
+                } else {
+                    logger.info("Skipped workaround for native linux launcher(s).");
+                }
+            }
+        }
+
+        if( "jnlp".equals(currentRunningBundlerID) ){
+            if( workarounds.isWorkaroundForBug182Needed() ){
+                // Workaround for "JNLP-generation: path for dependency-lib on windows with backslash"
+                // https://github.com/javafx-maven-plugin/javafx-maven-plugin/issues/182
+                // jnlp-bundler uses RelativeFileSet, and generates system-dependent dividers (\ on windows, / on others)
+                logger.info("Applying workaround for oracle-jdk-bug since 1.8.0u60 regarding jar-path inside generated JNLP-files.");
+                if( !ext.isSkipJNLPRessourcePathWorkaround182() ){
+                    workarounds.fixPathsInsideJNLPFiles();
+                } else {
+                    logger.info("Skipped workaround for jar-paths jar-path inside generated JNLP-files.");
+                }
+            }
+
+            // Do sign generated jar-files by calling the packager (this might change in the future,
+            // hopefully when oracle reworked the process inside the JNLP-bundler)
+            // https://github.com/javafx-maven-plugin/javafx-maven-plugin/issues/185
+            if( workarounds.isWorkaroundForBug185Needed(params) ){
+                logger.info("Signing jar-files referenced inside generated JNLP-files.");
+                if( !ext.isSkipSigningJarFilesJNLP185() ){
+                    // JavaFX signing using BLOB method will get dropped on JDK 9: "blob signing is going away in JDK9. "
+                    // https://bugs.openjdk.java.net/browse/JDK-8088866?focusedCommentId=13889898#comment-13889898
+                    if( !ext.isNoBlobSigning() ){
+                        logger.info("Signing jar-files using BLOB method.");
+                        signJarFilesUsingBlobSigning(project, ext);
+                    } else {
+                        logger.info("Signing jar-files using jarsigner.");
+                        signJarFiles(project, ext);
+                    }
+                    workarounds.applyWorkaround185(ext.isSkipSizeRecalculationForJNLP185());
+                } else {
+                    logger.info("Skipped signing jar-files referenced inside JNLP-files.");
+                }
+            }
+        }
+    }
+
+    private void doPrepareBeforeBundling(JavaFXGradlePluginExtension ext, Project project, String currentRunningBundlerID, final Logger logger, Map<String, ? super Object> paramsToBundleWith) {
+        // copy all files every time a bundler runs, because they might cleanup their folders,
+        // but user might have extend existing bundler using same foldername (which would end up deleted/cleaned up)
+        // fixes "Make it possible to have additional resources for bundlers"
+        // see https://github.com/FibreFoX/javafx-gradle-plugin/issues/38
+        if( ext.getAdditionalBundlerResources() != null ){
+            boolean skipCopyAdditionalBundlerResources = false;
+
+            // keep previous behaviour
+            Path additionalBundlerResources = getAbsoluteOrProjectRelativeFile(project, ext.getAdditionalBundlerResources(), ext.isCheckForAbsolutePaths()).toPath();
+            Path resolvedBundlerFolder = additionalBundlerResources.resolve(currentRunningBundlerID);
+
+            logger.info("Found additional bundler resources, trying to copy all files into build root, using:" + additionalBundlerResources.toFile().getAbsolutePath());
+
+            File bundlerImageRoot = AbstractBundler.IMAGES_ROOT.fetchFrom(paramsToBundleWith);
+            Path targetFolder = bundlerImageRoot.toPath();
+            Path sourceFolder = additionalBundlerResources;
+
+            // new behaviour, use bundler-name as folder-name
+            if( Files.exists(resolvedBundlerFolder) ){
+                logger.info("Found additional bundler resources for bundler " + currentRunningBundlerID);
+                sourceFolder = resolvedBundlerFolder;
+                // change behaviour to have more control for all bundlers being inside JDK
+                switch(currentRunningBundlerID) {
+                    case "windows.app":
+                        // no copy required, as we already have "additionalAppResources"
+                        skipCopyAdditionalBundlerResources = true;
+                        break;
+                    case "exe":
+                        File exeBundlerFolder = WinExeBundler.EXE_IMAGE_DIR.fetchFrom(paramsToBundleWith);
+                        targetFolder = exeBundlerFolder.toPath();
+                        break;
+                    case "msi":
+                        File msiBundlerFolder = WinMsiBundler.MSI_IMAGE_DIR.fetchFrom(paramsToBundleWith);
+                        targetFolder = msiBundlerFolder.toPath();
+                        break;
+                    case "windows.service":
+                        // no copy required, as we already have "additionalAppResources"
+                        skipCopyAdditionalBundlerResources = true;
+                        break;
+                    case "mac.app":
+                        // custom mac bundler might be used
+                        if( ext.isSkipMacBundlerWorkaround() ){
+                            logger.warn("The bundler with ID 'mac.app' is not supported, as that bundler does not provide any way to copy additional bundler-files.");
+                        }
+                        skipCopyAdditionalBundlerResources = true;
+                        break;
+                    case "mac.appStore":
+                        // custom mac bundler might be used
+                        if( ext.isSkipMacBundlerWorkaround() ){
+                            logger.warn("The bundler with ID 'mac.appStore' is not supported for using 'additionalBundlerResources', as that bundler does not provide any way to copy additional bundler-files.");
+                        }
+                        skipCopyAdditionalBundlerResources = true;
+                        break;
+                    case "mac.daemon":
+                        // this bundler just deletes everything ... it has no bundlerRoot
+                        logger.warn("The bundler with ID 'mac.daemon' is not supported, as that bundler does not provide any way to copy additional bundler-files.");
+                        skipCopyAdditionalBundlerResources = true;
+                        break;
+                    case "dmg":
+                        // custom mac bundler might be used
+                        if( ext.isSkipMacBundlerWorkaround() ){
+                            logger.warn("The bundler with ID 'dmg' is not supported for using 'additionalBundlerResources', as that bundler does not provide any way to copy additional bundler-files.");
+                        }
+                        skipCopyAdditionalBundlerResources = true;
+                        break;
+                    case "pkg":
+                        // custom mac bundler might be used
+                        if( ext.isSkipMacBundlerWorkaround() ){
+                            logger.warn("The bundler with ID 'pkg' is not supported for using 'additionalBundlerResources', as that bundler does not provide any way to copy additional bundler-files.");
+                        }
+                        skipCopyAdditionalBundlerResources = true;
+                        break;
+                    case "linux.app":
+                        // no copy required, as we already have "additionalAppResources"
+                        skipCopyAdditionalBundlerResources = true;
+                        break;
+                    case "deb":
+                        File linuxDebBundlerFolder = LinuxDebBundler.DEB_IMAGE_DIR.fetchFrom(paramsToBundleWith);
+                        targetFolder = linuxDebBundlerFolder.toPath();
+                        break;
+                    case "rpm":
+                        File linuxRpmBundlerFolder = LinuxRpmBundler.RPM_IMAGE_DIR.fetchFrom(paramsToBundleWith);
+                        targetFolder = linuxRpmBundlerFolder.toPath();
+                        break;
+                    default:
+                        logger.warn("Unknown bundler-ID found, copying from root of additionalBundlerResources into IMAGES_ROOT.");
+                        sourceFolder = additionalBundlerResources;
+                        break;
+                }
+            } else {
+                logger.info("No additional bundler resources for bundler " + currentRunningBundlerID + " was found, copying all files instead.");
+            }
+            if( !skipCopyAdditionalBundlerResources ){
+                try{
+                    logger.info("Copying additional bundler resources into: " + targetFolder.toFile().getAbsolutePath());
+                    copyRecursive(sourceFolder, targetFolder, project.getLogger());
+                } catch(IOException e){
+                    logger.warn("Couldn't copy additional bundler resource-file(s).", e);
+                }
+            } else {
+                logger.info("Skipped copying additional bundler resources, mostly because this bundler does not need them. You might want to use additionalAppResources. To make sure, check for any warnings printed above this message.");
+            }
+        }
+
+        // check if we need to inform the user about low performance even on SSD
+        // https://github.com/FibreFoX/javafx-gradle-plugin/issues/41
+        if( System.getProperty("os.name").toLowerCase().startsWith("linux") && "deb".equals(currentRunningBundlerID) ){
+            File generationTarget = getAbsoluteOrProjectRelativeFile(project, ext.getNativeOutputDir(), ext.isCheckForAbsolutePaths());
+            AtomicBoolean needsWarningAboutSlowPerformance = new AtomicBoolean(false);
+            generationTarget.toPath().getFileSystem().getFileStores().forEach(store -> {
+                if( "ext4".equals(store.type()) ){
+                    needsWarningAboutSlowPerformance.set(true);
+                }
+                if( "btrfs".equals(store.type()) ){
+                    needsWarningAboutSlowPerformance.set(true);
+                }
+            });
+            if( needsWarningAboutSlowPerformance.get() ){
+                logger.lifecycle("This bundler might take some while longer than expected.");
+                logger.lifecycle("For details about this, please go to: https://wiki.debian.org/Teams/Dpkg/FAQ#Q:_Why_is_dpkg_so_slow_when_using_new_filesystems_such_as_btrfs_or_ext4.3F");
+            }
+        }
+    }
+
+    /*
+     * Sometimes we need to work with some bundler, even if it wasn't requested. This happens when one bundler was selected and we need
+     * to work with the outcome of some image-bundler (because that JDK-bundler is faulty).
+     */
+    private boolean shouldBundlerRun(String requestedBundler, String currentRunningBundlerID, JavaFXGradlePluginExtension ext, final Logger logger, Map<String, ? super Object> params) {
+        if( requestedBundler != null && !"ALL".equalsIgnoreCase(requestedBundler) && !requestedBundler.equalsIgnoreCase(currentRunningBundlerID) ){
+            // this is not the specified bundler
+            return false;
+        }
+
+        if( ext.isSkipJNLP() && "jnlp".equalsIgnoreCase(currentRunningBundlerID) ){
+            logger.info("Skipped JNLP-bundling as requested.");
+            return false;
+        }
+
+        boolean runBundler = true;
+        // Workaround for native installer bundle not creating working executable native launcher
+        // (this is a comeback of issue 124)
+        // https://github.com/javafx-maven-plugin/javafx-maven-plugin/issues/205
+        // do run application bundler and put the cfg-file to application resources
+        if( System.getProperty("os.name").toLowerCase().startsWith("linux") ){
+            if( workarounds.isWorkaroundForBug205Needed() ){
+                // check if special conditions for this are met (not jnlp, but not linux.app too, because another workaround already works)
+                if( !"jnlp".equalsIgnoreCase(requestedBundler) && !"linux.app".equalsIgnoreCase(requestedBundler) && "linux.app".equalsIgnoreCase(currentRunningBundlerID) ){
+                    if( !ext.isSkipNativeLauncherWorkaround205() ){
+                        logger.info("Detected linux application bundler ('linux.app') needs to run before installer bundlers are executed.");
+                        runBundler = true;
+                        params.put(CFG_WORKAROUND_MARKER, "true");
+                    } else {
+                        logger.info("Skipped workaround for native linux installer bundlers.");
+                    }
+                }
+            }
+        }
+        return runBundler;
     }
 
     private void addToMapWhenNotNull(Object value, String key, Map<String, Object> map) {

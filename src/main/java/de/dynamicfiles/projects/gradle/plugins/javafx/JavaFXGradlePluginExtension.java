@@ -70,6 +70,10 @@ public class JavaFXGradlePluginExtension {
     private boolean noBlobSigning = false;
     private List<String> customBundlers = null;
     private boolean skipNativeLauncherWorkaround205 = false;
+    private boolean skipMacBundlerWorkaround = false;
+    private boolean failOnError = false;
+    private boolean onlyCustomBundlers = false;
+    private boolean skipJNLP = false;
 
     // GenerateKeyStoreMojo
     private String keyStore = "src/main/deploy/keystore.jks";
@@ -92,7 +96,8 @@ public class JavaFXGradlePluginExtension {
     // generic settings (not present on javafx-maven-plugin)
     private String alternativePathToJarFile = null;
     private boolean usePatchedJFXAntLib = true;
-    private boolean checkForAbsolutePaths = false;
+    @Deprecated
+    private boolean checkForAbsolutePaths = true;
 
     /*
         generated methods below
@@ -399,6 +404,38 @@ public class JavaFXGradlePluginExtension {
 
     public void setSkipNativeLauncherWorkaround205(boolean skipNativeLauncherWorkaround205) {
         this.skipNativeLauncherWorkaround205 = skipNativeLauncherWorkaround205;
+    }
+
+    public boolean isSkipMacBundlerWorkaround() {
+        return skipMacBundlerWorkaround;
+    }
+
+    public void setSkipMacBundlerWorkaround(boolean skipMacBundlerWorkaround) {
+        this.skipMacBundlerWorkaround = skipMacBundlerWorkaround;
+    }
+
+    public boolean isFailOnError() {
+        return failOnError;
+    }
+
+    public void setFailOnError(boolean failOnError) {
+        this.failOnError = failOnError;
+    }
+
+    public boolean isOnlyCustomBundlers() {
+        return onlyCustomBundlers;
+    }
+
+    public void setOnlyCustomBundlers(boolean onlyCustomBundlers) {
+        this.onlyCustomBundlers = onlyCustomBundlers;
+    }
+
+    public boolean isSkipJNLP() {
+        return skipJNLP;
+    }
+
+    public void setSkipJNLP(boolean skipJNLP) {
+        this.skipJNLP = skipJNLP;
     }
 
     public String getKeyStore() {
