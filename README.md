@@ -22,6 +22,24 @@ In the need of some equivalent of the [javafx-maven-plugin](https://github.com/j
 
 
 
+Requirements
+============
+* Gradle 2.10 and above (works on Gradle 3 too)
+* Java Developer Kit 8 with at least Update 20
+
+
+
+OS-specific requirements
+========================
+* (Windows) EXE installers: Inno Setup
+* (Windows) MSI installers: WiX (at least version 3.7)
+* (Linux) DEB installers: dpkg-deb
+* (Linux) RPM installers: rpmbuild
+* (Mac) DMG installers: hdiutil
+* (Mac) PKG installers: pkgbuild
+
+
+
 Example `build.gradle`
 ======================
 
