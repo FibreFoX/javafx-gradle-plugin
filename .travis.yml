@@ -1,13 +1,12 @@
 language: java
 
-## https://docs.travis-ci.com/user/multi-os/
-matrix:
-  include:
-    - os: linux
-      dist: trusty
-      sudo: required
-    - os: osx
+os:
+  - linux
+  - osx
 
+## http://blog.travis-ci.com/2015-10-14-opening-up-ubuntu-trusty-beta/
+sudo: required
+dist: trusty
 
 jdk:
   - oraclejdk8
