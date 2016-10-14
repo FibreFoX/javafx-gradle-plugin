@@ -25,7 +25,7 @@ In the need of some equivalent of the [javafx-maven-plugin](https://github.com/j
 Requirements
 ============
 * Gradle 2.10 and above (works on Gradle 3 too)
-* Java Developer Kit 8 with at least Update 20
+* Java Developer Kit 8 with at least Update 40
 
 
 
