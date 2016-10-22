@@ -8,9 +8,17 @@ matrix:
       sudo: required
       dist: trusty
       jdk: oraclejdk8
+      env: FAILURES_ALLOWED=false
+    - os: linux
+      sudo: false
+      jdk: oraclejdk8
+      env: FAILURES_ALLOWED=true
+      # older than 1.8.0_40 will fail compiling since javafx-gradle-plugin 8.8.0
     - os: osx
+      osx_image: xcode8
+      env: FAILURES_ALLOWED=false
   allow_failures:
-    - os: osx
+    - env: FAILURES_ALLOWED=true
 
 # http://stackoverflow.com/questions/35128777/travis-ci-build-failed#comment58070003_35153221
 before_install:
