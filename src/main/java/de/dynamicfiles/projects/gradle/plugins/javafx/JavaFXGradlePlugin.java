@@ -27,11 +27,13 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.gradle.api.GradleException;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
+import org.gradle.internal.classloader.ClassLoaderVisitor;
 
 /**
  *
@@ -139,7 +141,7 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
             }
 
             // check if already added! otherwise we would include/patch that file multiple times :(
-            List<URL> loadedAntJavaFXLibs = org.gradle.internal.classloader.ClasspathUtil.getClasspath(sysloader).stream().filter(loadedURL -> {
+            List<URL> loadedAntJavaFXLibs = getLoadedClasspathURLs(sysloader).stream().filter(loadedURL -> {
                 return loadedURL.toExternalForm().endsWith(ANT_JAVAFX_JAR_FILENAME);
             }).collect(Collectors.toList());
 
@@ -170,6 +172,18 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
     protected boolean isGradleDaemonMode() {
         String javaCommand = System.getProperty("sun.java.command");
         return javaCommand != null && javaCommand.startsWith("org.gradle.launcher.daemon");
+    }
+
+    // got changed since gradle 3.3, so this is some re-implementation of that
+    protected List<URL> getLoadedClasspathURLs(ClassLoader classLoader) {
+        final List<URL> classpathUrls = new ArrayList<>();
+        new ClassLoaderVisitor() {
+            @Override
+            public void visitClassPath(URL[] classPath) {
+                classpathUrls.addAll(Arrays.asList(classPath));
+            }
+        }.visit(classLoader);
+        return classpathUrls;
     }
 
 }
