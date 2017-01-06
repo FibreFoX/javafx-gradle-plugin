@@ -257,7 +257,7 @@ Enhancements:
 (Not yet) Release(d) Notes
 ==========================
 
-upcoming Version 8.7.1 (??-oct-2016) *(available as 8.7.1-SNAPSHOT)*
+upcoming Version 8.8.0 (??-jan-2017)
 
 Enhancements:
 * updated all example-projects to use a different variable-name of the "current" plugin-version (fixes issue #40)
@@ -266,3 +266,6 @@ Enhancements:
 
 Changes:
 * reimplemented `additionalBundlerResources`, now searching for folders with the name of the used bundler, makes it possible to adjust nearly all bundlers now
+
+Bugfixes:
+* added support for Gradle 3.3, fixes issue #52)
