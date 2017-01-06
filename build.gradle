@@ -29,6 +29,7 @@ repositories {
 dependencies {
     compile gradleApi()
     testCompile gradleTestKit()
+    testCompile group: 'org.testng', name: 'testng', version: '6.10'
     compile files("${System.properties['java.home']}/../lib/ant-javafx.jar")
     compile 'org.ow2.asm:asm-all:5.1'
     runtime 'org.ow2.asm:asm-all:5.1'
