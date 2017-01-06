@@ -8,7 +8,7 @@ Depending on the tools you have installed, there will be some installers generat
 You need to set some `vendor`-name which is required for generating installers.
 
 To change the launcher icon, put place a file named 'adjusted-launcher-icon.ico' (at least for windows)
-into the folder `src/main/deploy/windows` for the bundler being able to pick it up. This file will be used
+into the folder `src/main/deploy/package/windows` for the bundler being able to pick it up. This file will be used
 as icon for your native launcher including the installer (at least for windows exe-installer).
 
 For every system you target, you need some working system of that targeted one, because the generated result
