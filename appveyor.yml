@@ -11,10 +11,10 @@ branches:
 skip_tags: true
 
 build_script:
-  - gradlew.bat clean assemble install --info --no-daemon
+  - gradlew.bat clean assemble install --info --no-daemon --stacktrace
 
 test_script:
-  - gradlew.bat check --info --no-daemon
+  - gradlew.bat check --info --no-daemon --stacktrace
 
 cache:
   - C:\Users\appveyor\.gradle
