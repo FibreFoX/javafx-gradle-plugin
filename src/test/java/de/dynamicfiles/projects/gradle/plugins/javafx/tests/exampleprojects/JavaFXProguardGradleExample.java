@@ -51,7 +51,7 @@ public class JavaFXProguardGradleExample extends ExampleProjectTest {
 
                 // run build
                 BuildResult buildResult = runner.withProjectDir(targetFolder.toAbsolutePath().toFile())
-                        .withArguments("clean", "jfxJar")
+                        .withArguments("clean", "jfxJar", "--stacktrace")
                         .withDebug(true)
                         .build();
             } catch(IOException e){
@@ -75,7 +75,7 @@ public class JavaFXProguardGradleExample extends ExampleProjectTest {
 
                 // run build
                 BuildResult buildResult = runner.withProjectDir(targetFolder.toAbsolutePath().toFile())
-                        .withArguments("clean", "jfxNative")
+                        .withArguments("clean", "jfxNative", "--stacktrace")
                         .withDebug(true)
                         .build();
                 // check result

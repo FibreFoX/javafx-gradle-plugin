@@ -50,7 +50,7 @@ public class MinimalProjectJfxJar extends ExampleProjectTest {
 
                 // run build
                 BuildResult buildResult = runner.withProjectDir(targetFolder.toAbsolutePath().toFile())
-                        .withArguments("clean", "jfxJar")
+                        .withArguments("clean", "jfxJar", "--stacktrace")
                         .withDebug(true)
                         .build();
                 // TODO check result (currently this is only a "runs without problems"-test)
