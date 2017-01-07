@@ -51,6 +51,7 @@ public class MinimalProjectWithoutJre extends ExampleProjectTest {
                 // run build
                 BuildResult buildResult = runner.withProjectDir(targetFolder.toAbsolutePath().toFile())
                         .withArguments("clean", "jfxNative")
+                        .withDebug(true)
                         .build();
                 // TODO check result (currently this is only a "runs without problems"-test)
             } catch(IOException e){
