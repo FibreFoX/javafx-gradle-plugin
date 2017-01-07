@@ -306,7 +306,7 @@ public class JfxNativeWorker extends JfxAbstractWorker {
             foundBundler = true;
 
             try{
-                if( workarounds.isWorkaroundForNativeMacBundlerNeeded(getAbsoluteOrProjectRelativeFile(project, ext.getAdditionalBundlerResources(), ext.isCheckForAbsolutePaths())) ){
+                if( ext.getAdditionalBundlerResources() != null && workarounds.isWorkaroundForNativeMacBundlerNeeded(getAbsoluteOrProjectRelativeFile(project, ext.getAdditionalBundlerResources(), ext.isCheckForAbsolutePaths())) ){
                     if( !ext.isSkipMacBundlerWorkaround() ){
                         b = workarounds.applyWorkaroundForNativeMacBundler(b, currentRunningBundlerID, params, getAbsoluteOrProjectRelativeFile(project, ext.getAdditionalBundlerResources(), ext.isCheckForAbsolutePaths()));
                     } else {
