@@ -41,6 +41,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.ResourceBundle;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -162,9 +163,14 @@ public class MacAppBundlerWithAdditionalResources extends MacAppBundler {
                     createLauncherForEntryPoint(tmp, rootDirectory);
                 }
             }
+
+            Log.info("Copying additional bundler resources...");
+
             Path sourceFolder = additionalBundlerResources.toPath();
             Path targetFolder = rootDirectory.toPath();
             AtomicReference<IOException> copyingException = new AtomicReference<>(null);
+
+            AtomicInteger copiedFiles = new AtomicInteger(0);
 
             Files.walkFileTree(sourceFolder, new FileVisitor<Path>() {
 
@@ -179,6 +185,7 @@ public class MacAppBundlerWithAdditionalResources extends MacAppBundler {
                 public FileVisitResult visitFile(Path sourceFile, BasicFileAttributes attrs) throws IOException {
                     // do copy, and replace, as the resource might already be existing
                     Files.copy(sourceFile, targetFolder.resolve(sourceFolder.relativize(sourceFile)), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES);
+                    copiedFiles.incrementAndGet();
                     return FileVisitResult.CONTINUE;
                 }
 
@@ -199,6 +206,8 @@ public class MacAppBundlerWithAdditionalResources extends MacAppBundler {
             if( copyingException.get() != null ){
                 throw new RuntimeException("Got exception while copying additional bundler resources", copyingException.get());
             }
+
+            Log.info("Copied additional bundler resources count: " + copiedFiles.get());
 
             String signingIdentity = DEVELOPER_ID_APP_SIGNING_KEY.fetchFrom(p);
             if( signingIdentity != null ){

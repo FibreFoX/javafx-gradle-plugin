@@ -48,6 +48,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.jar.JarFile;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.gradle.api.GradleException;
@@ -158,6 +159,7 @@ public class JfxNativeWorker extends JfxAbstractWorker {
             throw new GradleException("The following keys in <bundleArguments> duplicate other settings, please remove one or the other: " + duplicateKeys.toString());
         }
 
+        // TODO check mainClass exists inside jar-file
         // check for misconfiguration, requires to be different as this would overwrite primary launcher
         Collection<String> launcherNames = new ArrayList<>();
         launcherNames.add(appName);
@@ -172,33 +174,33 @@ public class JfxNativeWorker extends JfxAbstractWorker {
                 // assume we have valid entry here
                 params.put(StandardBundlerParam.SECONDARY_LAUNCHERS.getID(), launchersMap.stream().map(launcherMap -> getNativeLauncher(launcherMap)).map(launcher -> {
                     logger.info("Adding secondary launcher: " + launcher.getAppName());
-                    Map<String, Object> secondaryLauncher = new HashMap<>();
-                    addToMapWhenNotNull(launcher.getAppName(), StandardBundlerParam.APP_NAME.getID(), secondaryLauncher);
-                    addToMapWhenNotNull(launcher.getMainClass(), StandardBundlerParam.MAIN_CLASS.getID(), secondaryLauncher);
-                    addToMapWhenNotNull(launcher.getJfxMainAppJarName(), StandardBundlerParam.MAIN_JAR.getID(), secondaryLauncher);
-                    addToMapWhenNotNull(launcher.getNativeReleaseVersion(), StandardBundlerParam.VERSION.getID(), secondaryLauncher);
-                    addToMapWhenNotNull(launcher.getVendor(), StandardBundlerParam.VENDOR.getID(), secondaryLauncher);
-                    addToMapWhenNotNull(launcher.getIdentifier(), StandardBundlerParam.IDENTIFIER.getID(), secondaryLauncher);
+                    Map<String, Object> secondaryLauncherGenerationMap = new HashMap<>();
+                    addToMapWhenNotNull(launcher.getAppName(), StandardBundlerParam.APP_NAME.getID(), secondaryLauncherGenerationMap);
+                    addToMapWhenNotNull(launcher.getMainClass(), StandardBundlerParam.MAIN_CLASS.getID(), secondaryLauncherGenerationMap);
+                    addToMapWhenNotNull(launcher.getJfxMainAppJarName(), StandardBundlerParam.MAIN_JAR.getID(), secondaryLauncherGenerationMap);
+                    addToMapWhenNotNull(launcher.getNativeReleaseVersion(), StandardBundlerParam.VERSION.getID(), secondaryLauncherGenerationMap);
+                    addToMapWhenNotNull(launcher.getVendor(), StandardBundlerParam.VENDOR.getID(), secondaryLauncherGenerationMap);
+                    addToMapWhenNotNull(launcher.getIdentifier(), StandardBundlerParam.IDENTIFIER.getID(), secondaryLauncherGenerationMap);
 
-                    addToMapWhenNotNull(launcher.isNeedMenu(), StandardBundlerParam.MENU_HINT.getID(), secondaryLauncher);
-                    addToMapWhenNotNull(launcher.isNeedShortcut(), StandardBundlerParam.SHORTCUT_HINT.getID(), secondaryLauncher);
+                    addToMapWhenNotNull(launcher.isNeedMenu(), StandardBundlerParam.MENU_HINT.getID(), secondaryLauncherGenerationMap);
+                    addToMapWhenNotNull(launcher.isNeedShortcut(), StandardBundlerParam.SHORTCUT_HINT.getID(), secondaryLauncherGenerationMap);
 
                     // as we can set another JAR-file, this might be completly different
-                    addToMapWhenNotNull(launcher.getClasspath(), StandardBundlerParam.CLASSPATH.getID(), secondaryLauncher);
+                    addToMapWhenNotNull(launcher.getClasspath(), StandardBundlerParam.CLASSPATH.getID(), secondaryLauncherGenerationMap);
 
                     Optional.ofNullable(launcher.getJvmArgs()).ifPresent(jvmOptions -> {
-                        secondaryLauncher.put(StandardBundlerParam.JVM_OPTIONS.getID(), new ArrayList<>(jvmOptions));
+                        secondaryLauncherGenerationMap.put(StandardBundlerParam.JVM_OPTIONS.getID(), new ArrayList<>(jvmOptions));
                     });
                     Optional.ofNullable(launcher.getJvmProperties()).ifPresent(jvmProps -> {
-                        secondaryLauncher.put(StandardBundlerParam.JVM_PROPERTIES.getID(), new HashMap<>(jvmProps));
+                        secondaryLauncherGenerationMap.put(StandardBundlerParam.JVM_PROPERTIES.getID(), new HashMap<>(jvmProps));
                     });
                     Optional.ofNullable(launcher.getUserJvmArgs()).ifPresent(userJvmOptions -> {
-                        secondaryLauncher.put(StandardBundlerParam.USER_JVM_OPTIONS.getID(), new HashMap<>(userJvmOptions));
+                        secondaryLauncherGenerationMap.put(StandardBundlerParam.USER_JVM_OPTIONS.getID(), new HashMap<>(userJvmOptions));
                     });
                     Optional.ofNullable(launcher.getLauncherArguments()).ifPresent(arguments -> {
                         params.put(StandardBundlerParam.ARGUMENTS.getID(), new ArrayList<>(arguments));
                     });
-                    return secondaryLauncher;
+                    return secondaryLauncherGenerationMap;
                 }).collect(Collectors.toList()));
             }
         });
@@ -305,20 +307,11 @@ public class JfxNativeWorker extends JfxAbstractWorker {
             foundBundler = true;
 
             try{
-                // special mac-specific bunder
-                if( !System.getProperty("os.name").toLowerCase().contains("os x") ){
-                    // only when required and not opted out
-                    if( ext.getAdditionalBundlerResources() != null ){
-                        if( !ext.isSkipMacBundlerWorkaround() ){
-                            if( "mac.app".equals(currentRunningBundlerID) ){
-                                // replace current running bundler with our own implementation
-                                b = new MacAppBundlerWithAdditionalResources();
-                                params.put("mac.app.bundler", b);
-                                params.put(MacAppBundlerWithAdditionalResources.ADDITIONAL_BUNDLER_RESOURCES.getID(), getAbsoluteOrProjectRelativeFile(project, ext.getAdditionalBundlerResources(), ext.isCheckForAbsolutePaths()));
-                            }
-                        } else {
-                            logger.info("Skipping replacement of the 'mac.app'-bundler. Please make sure you know what you are doing");
-                        }
+                if( workarounds.isWorkaroundForNativeMacBundlerNeeded(getAbsoluteOrProjectRelativeFile(project, ext.getAdditionalBundlerResources(), ext.isCheckForAbsolutePaths())) ){
+                    if( !ext.isSkipMacBundlerWorkaround() ){
+                        b = workarounds.applyWorkaroundForNativeMacBundler(b, currentRunningBundlerID, params, getAbsoluteOrProjectRelativeFile(project, ext.getAdditionalBundlerResources(), ext.isCheckForAbsolutePaths()));
+                    } else {
+                        logger.info("Skipping replacement of the 'mac.app'-bundler. Please make sure you know what you are doing!");
                     }
                 }
 
@@ -640,10 +633,12 @@ public class JfxNativeWorker extends JfxAbstractWorker {
         if( rawMap.get("icon") != null ){
             if( rawMap.get("icon") instanceof File ){
                 fileAssociation.setIcon((File) rawMap.get("icon"));
-            } else if( rawMap.get("icon") instanceof Path ){
-                fileAssociation.setIcon(((Path) rawMap.get("icon")).toAbsolutePath().toFile());
             } else {
-                fileAssociation.setIcon(new File((String) rawMap.get("icon")));
+                if( rawMap.get("icon") instanceof Path ){
+                    fileAssociation.setIcon(((Path) rawMap.get("icon")).toAbsolutePath().toFile());
+                } else {
+                    fileAssociation.setIcon(new File((String) rawMap.get("icon")));
+                }
             }
         }
         return fileAssociation;
@@ -786,6 +781,27 @@ public class JfxNativeWorker extends JfxAbstractWorker {
         } catch(IOException | InterruptedException ex){
             throw new GradleException("There was an exception while signing jar-file: " + jarFile.getAbsolutePath(), ex);
         }
+    }
+
+    private boolean isClassInsideJarFile(String classname, String jarFile) {
+        return isClassInsideJarFile(classname, new File(jarFile));
+    }
+
+    private boolean isClassInsideJarFile(String classname, Path jarFile) {
+        return isClassInsideJarFile(classname, jarFile.toFile());
+    }
+
+    private boolean isClassInsideJarFile(String classname, File jarFile) {
+        String requestedJarEntryName = classname.replace(".", "/") + ".class";
+        try{
+            JarFile jarFileToSearchIn = new JarFile(jarFile, false, JarFile.OPEN_READ);
+            return jarFileToSearchIn.stream().parallel().filter(jarEntry -> {
+                return jarEntry.getName().equals(requestedJarEntryName);
+            }).findAny().isPresent();
+        } catch(IOException ex){
+            // NO-OP
+        }
+        return false;
     }
 
 }
