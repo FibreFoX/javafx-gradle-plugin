@@ -33,7 +33,6 @@ import de.dynamicfiles.projects.gradle.plugins.javafx.JavaFXGradlePluginExtensio
 import de.dynamicfiles.projects.gradle.plugins.javafx.dto.FileAssociation;
 import de.dynamicfiles.projects.gradle.plugins.javafx.dto.NativeLauncher;
 import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.internal.Workarounds;
-import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.workarounds.MacAppBundlerWithAdditionalResources;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
