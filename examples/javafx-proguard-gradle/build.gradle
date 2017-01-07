@@ -19,6 +19,7 @@ buildscript {
 apply plugin: 'java'
 
 repositories {
+    mavenLocal()
     mavenCentral()
 }
 
