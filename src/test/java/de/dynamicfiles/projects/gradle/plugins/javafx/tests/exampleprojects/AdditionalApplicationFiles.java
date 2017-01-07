@@ -52,7 +52,7 @@ public class AdditionalApplicationFiles extends ExampleProjectTest {
 
                 // run build
                 BuildResult buildResult = runner.withProjectDir(targetFolder.toAbsolutePath().toFile())
-                        .withArguments("clean", "jfxNative", "--stacktrace")
+                        .withArguments("clean", "jfxNative", "--info", "--stacktrace")
                         .withDebug(true)
                         .build();
             } catch(IOException e){
