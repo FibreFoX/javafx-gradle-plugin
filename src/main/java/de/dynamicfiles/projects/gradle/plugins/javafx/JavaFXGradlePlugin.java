@@ -33,7 +33,6 @@ import java.util.stream.Collectors;
 import org.gradle.api.GradleException;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
-import org.gradle.internal.classloader.ClassLoaderVisitor;
 
 /**
  *
@@ -123,8 +122,10 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
             // would result into: org.gradle.api.InvalidUserDataException: Cannot change dependencies of configuration ':classpath' after it has been resolved.
 
             // lets mess with the classloaders...
+            project.getLogger().debug("Using JavaFXGradlePlugin-class classloader");
             sysloader = (URLClassLoader) this.getClass().getClassLoader();
         } else {
+            project.getLogger().debug("Using buildscript classloader");
             sysloader = (URLClassLoader) buildscriptClassloader;
         }
 
@@ -141,12 +142,14 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
             }
 
             // check if already added! otherwise we would include/patch that file multiple times :(
-            List<URL> loadedAntJavaFXLibs = getLoadedClasspathURLs(sysloader).stream().filter(loadedURL -> {
+            List<URL> loadedAntJavaFXLibs = Arrays.asList(sysloader.getURLs()).stream().filter(loadedURL -> {
                 return loadedURL.toExternalForm().endsWith(ANT_JAVAFX_JAR_FILENAME);
             }).collect(Collectors.toList());
 
             boolean alreadyLoaded = loadedAntJavaFXLibs.size() > 0;
             boolean workaroundLoaded = loadedAntJavaFXLibs.stream().filter(libURL -> libURL.toExternalForm().contains(MonkeyPatcher.WORKAROUND_DIRECTORY_NAME)).count() > 0;
+
+            project.getLogger().debug("DEBUG > Having " + loadedAntJavaFXLibs.size() + " loadedJars");
 
             // only when not loaded
             if( alreadyLoaded == false ){
@@ -161,8 +164,10 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
                 // I really don't know, why there isn't a direct way to add some File... or just one URL,
                 // but: no need to check if jar already was added ;) it's done inside
                 org.gradle.internal.classloader.ClasspathUtil.addUrl(sysloader, antJarList);
-            } else if( !usePatchedJFXAntLib && workaroundLoaded ){
-                project.getLogger().warn("Please restart gradle-daemon! Patched " + ANT_JAVAFX_JAR_FILENAME + " is loaded, but you disabled to patch and use that file.");
+            } else {
+                if( !usePatchedJFXAntLib && workaroundLoaded ){
+                    project.getLogger().warn("Please restart gradle-daemon! Patched " + ANT_JAVAFX_JAR_FILENAME + " is loaded, but you disabled to patch and use that file.");
+                }
             }
         } catch(MalformedURLException ex){
             throw new GradleException("Could not add Ant-JavaFX-JAR to plugin-classloader", ex);
@@ -172,18 +177,6 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
     protected boolean isGradleDaemonMode() {
         String javaCommand = System.getProperty("sun.java.command");
         return javaCommand != null && javaCommand.startsWith("org.gradle.launcher.daemon");
-    }
-
-    // got changed since gradle 3.3, so this is some re-implementation of that
-    protected List<URL> getLoadedClasspathURLs(ClassLoader classLoader) {
-        final List<URL> classpathUrls = new ArrayList<>();
-        new ClassLoaderVisitor() {
-            @Override
-            public void visitClassPath(URL[] classPath) {
-                classpathUrls.addAll(Arrays.asList(classPath));
-            }
-        }.visit(classLoader);
-        return classpathUrls;
     }
 
 }
