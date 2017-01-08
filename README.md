@@ -119,13 +119,17 @@ jfx {
     fileAssociations = null // List<Map<String, Object>>
     noBlobSigning = false // when using bundler "jnlp", you can choose to NOT use blob signing
     customBundlers = null // List<String>
-    skipNativeLauncherWorkaround205 = false
+    failOnError = false
+    onlyCustomBundlers = false
+    skipJNLP = false
     
     skipNativeLauncherWorkaround124 = false
     skipNativeLauncherWorkaround167 = false
+    skipNativeLauncherWorkaround205 = false
     skipJNLPRessourcePathWorkaround182 = false
     skipSigningJarFilesJNLP185 = false
     skipSizeRecalculationForJNLP185 = false
+    skipMacBundlerWorkaround = false
     
     // gradle jfxRun
     runJavaParameter = null // String
@@ -259,13 +263,17 @@ Enhancements:
 
 upcoming Version 8.8.0 (??-jan-2017)
 
+Changes:
+* reimplemented `additionalBundlerResources`, now searching for folders with the name of the used bundler, makes it possible to adjust nearly all bundlers now
+
 Enhancements:
 * updated all example-projects to use a different variable-name of the "current" plugin-version (fixes issue #40)
 * added warning about slow performance (even on SSD) when having ext4/btrfs filesystems using "deb"-bundler (fixes issue #41)
 * added warning about missing "jnlp.outfile"-property inside bundleArguments when using JNLP-bundler (from issue #42)
 
-Changes:
-* reimplemented `additionalBundlerResources`, now searching for folders with the name of the used bundler, makes it possible to adjust nearly all bundlers now
-
 Bugfixes:
-* added support for Gradle 3.3, fixes issue #52)
+* added support for Gradle 3.3 (fixes issue #52)
+
+New:
+* added ability to fail the build on errors while bundling, just set `failOnError = true` inside the jfx-block
+* when having not specified any bundler, it now is possible to remove that JNLP-warning regarding "No OutFile Specificed", which makes that bundler being skipped, just set `skipJNLP = true` inside the jfx-block
