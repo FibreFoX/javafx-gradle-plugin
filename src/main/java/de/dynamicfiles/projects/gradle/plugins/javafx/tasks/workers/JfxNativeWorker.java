@@ -755,6 +755,9 @@ public class JfxNativeWorker extends JfxAbstractWorker {
         command.add(ext.getKeyPassword());
         command.add(jarFile.getAbsolutePath());
         command.add(ext.getKeyStoreAlias());
+        Optional.ofNullable(ext.getAdditionalJarsignerParameters()).ifPresent(jarsignerParameters -> {
+            command.addAll(jarsignerParameters);
+        });
 
         if( ext.isVerbose() ){
             command.add("-verbose");

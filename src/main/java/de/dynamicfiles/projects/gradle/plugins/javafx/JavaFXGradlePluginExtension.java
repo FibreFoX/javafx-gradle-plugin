@@ -75,6 +75,7 @@ public class JavaFXGradlePluginExtension {
     private boolean onlyCustomBundlers = false;
     private boolean skipJNLP = false;
     private boolean skipNativeVersionNumberSanitizing = false;
+    private List<String> additionalJarsignerParameters = null;
 
     // GenerateKeyStoreMojo
     private String keyStore = "src/main/deploy/keystore.jks";
@@ -445,6 +446,14 @@ public class JavaFXGradlePluginExtension {
 
     public void setSkipNativeVersionNumberSanitizing(boolean skipNativeVersionNumberSanitizing) {
         this.skipNativeVersionNumberSanitizing = skipNativeVersionNumberSanitizing;
+    }
+
+    public List<String> getAdditionalJarsignerParameters() {
+        return additionalJarsignerParameters;
+    }
+
+    public void setAdditionalJarsignerParameters(List<String> additionalJarsignerParameters) {
+        this.additionalJarsignerParameters = additionalJarsignerParameters;
     }
 
     public String getKeyStore() {
