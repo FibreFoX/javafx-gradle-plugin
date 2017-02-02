@@ -83,6 +83,8 @@ public class MacAppBundlerWithAdditionalResources extends MacAppBundler {
             return super.doBundle(p, outputDirectory, dependentTask);
         }
 
+        Log.info("Using special javafx-maven-plugin MacAppBundler");
+
         // if special additional bundler resources are provided, we need to do magic here !
         Map<String, ? super Object> originalParams = new HashMap<>(p);
         doOutputFolderChecks(outputDirectory);
