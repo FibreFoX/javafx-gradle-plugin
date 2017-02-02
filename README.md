@@ -267,6 +267,9 @@ upcoming Version 8.8.0 (??-feb-2017)
 New:
 * `nativeReleaseVersion` will now get sanitized, anything than numbers and dots are removed, this ensures compatibility with the used bundler toolsets
 * when using `noBlobSigning = true` (which will get dropped with JDK9) the `jarsigner` executable will be used, but it was lacking proper customization, therefor a new property was introduced `additionalJarsignerParameters` which will be appended to all other stuff on the jarsigner-command
+* added ability to fail the build on errors while bundling, just set `failOnError = true` inside the jfx-block
+* when having not specified any bundler, it now is possible to remove that JNLP-warning regarding "No OutFile Specificed", which makes that bundler being skipped, just set `skipJNLP = true` inside the jfx-block
+* added property to skip `nativeReleaseVersion` rewriting, just set `skipNativeVersionNumberSanitizing = true` inside the jfx-block
 
 Changes:
 * reimplemented `additionalBundlerResources`, now searching for folders with the name of the used bundler, makes it possible to adjust nearly all bundlers now (for Mac a special replacement-class was created, as the default one did not provide any way to add more files)
@@ -279,7 +282,3 @@ Enhancements:
 Bugfixes:
 * added support for Gradle 3.3 (fixes issue #52)
 
-New:
-* added ability to fail the build on errors while bundling, just set `failOnError = true` inside the jfx-block
-* when having not specified any bundler, it now is possible to remove that JNLP-warning regarding "No OutFile Specificed", which makes that bundler being skipped, just set `skipJNLP = true` inside the jfx-block
-* added property to skip `nativeReleaseVersion` rewriting, just set `skipNativeVersionNumberSanitizing = true` inside the jfx-block
