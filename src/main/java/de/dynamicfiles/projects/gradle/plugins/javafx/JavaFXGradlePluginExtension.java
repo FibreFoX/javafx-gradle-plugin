@@ -74,6 +74,7 @@ public class JavaFXGradlePluginExtension {
     private boolean failOnError = false;
     private boolean onlyCustomBundlers = false;
     private boolean skipJNLP = false;
+    private boolean skipNativeVersionNumberSanitizing = false;
 
     // GenerateKeyStoreMojo
     private String keyStore = "src/main/deploy/keystore.jks";
@@ -100,7 +101,7 @@ public class JavaFXGradlePluginExtension {
     private boolean checkForAbsolutePaths = true;
 
     /*
-        generated methods below
+     * generated methods below
      */
     public boolean isVerbose() {
         return verbose;
@@ -436,6 +437,14 @@ public class JavaFXGradlePluginExtension {
 
     public void setSkipJNLP(boolean skipJNLP) {
         this.skipJNLP = skipJNLP;
+    }
+
+    public boolean isSkipNativeVersionNumberSanitizing() {
+        return skipNativeVersionNumberSanitizing;
+    }
+
+    public void setSkipNativeVersionNumberSanitizing(boolean skipNativeVersionNumberSanitizing) {
+        this.skipNativeVersionNumberSanitizing = skipNativeVersionNumberSanitizing;
     }
 
     public String getKeyStore() {

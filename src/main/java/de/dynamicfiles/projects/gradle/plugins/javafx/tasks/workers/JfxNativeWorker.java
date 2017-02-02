@@ -96,6 +96,11 @@ public class JfxNativeWorker extends JfxAbstractWorker {
         params.put(StandardBundlerParam.APP_NAME.getID(), appName);
 
         params.put(StandardBundlerParam.VERSION.getID(), ext.getNativeReleaseVersion());
+        // replace that value
+        if( !ext.isSkipNativeVersionNumberSanitizing() && ext.getNativeReleaseVersion() != null ){
+            params.put(StandardBundlerParam.VERSION.getID(), ext.getNativeReleaseVersion().replaceAll("[^\\d.]", ""));
+        }
+
         if( ext.getVendor() == null ){
             throw new GradleException("You have to set a vendor, which is required for bundlers.");
         }
