@@ -123,6 +123,7 @@ jfx {
     onlyCustomBundlers = false
     skipJNLP = false
     skipNativeVersionNumberSanitizing = false
+    skipMainClassScanning = false
     
     skipNativeLauncherWorkaround124 = false
     skipNativeLauncherWorkaround167 = false
