@@ -163,7 +163,14 @@ public class JfxNativeWorker extends JfxAbstractWorker {
             throw new GradleException("The following keys in <bundleArguments> duplicate other settings, please remove one or the other: " + duplicateKeys.toString());
         }
 
-        // TODO check mainClass exists inside jar-file
+        if( !ext.isSkipMainClassScanning() ){
+            boolean mainClassInsideResourceJarFile = resourceFiles.stream().filter(resourceFile -> resourceFile.toString().endsWith(".jar")).filter(resourceJarFile -> isClassInsideJarFile(ext.getMainClass(), resourceJarFile)).findFirst().isPresent();
+            if( !mainClassInsideResourceJarFile ){
+                // warn user about missing class-file
+                logger.warn(String.format("Class with name %s was not found inside provided jar files!! JavaFX-application might not be working !!", ext.getMainClass()));
+            }
+        }
+
         // check for misconfiguration, requires to be different as this would overwrite primary launcher
         Collection<String> launcherNames = new ArrayList<>();
         launcherNames.add(appName);
@@ -788,14 +795,6 @@ public class JfxNativeWorker extends JfxAbstractWorker {
         } catch(IOException | InterruptedException ex){
             throw new GradleException("There was an exception while signing jar-file: " + jarFile.getAbsolutePath(), ex);
         }
-    }
-
-    private boolean isClassInsideJarFile(String classname, String jarFile) {
-        return isClassInsideJarFile(classname, new File(jarFile));
-    }
-
-    private boolean isClassInsideJarFile(String classname, Path jarFile) {
-        return isClassInsideJarFile(classname, jarFile.toFile());
     }
 
     private boolean isClassInsideJarFile(String classname, File jarFile) {
