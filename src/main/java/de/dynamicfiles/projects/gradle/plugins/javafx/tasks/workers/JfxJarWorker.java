@@ -136,6 +136,12 @@ public class JfxJarWorker extends JfxAbstractWorker {
         if( !foundLibs.isEmpty() ){
             createJarParams.setClasspath(ext.getLibFolderName() + "/" + String.join(" " + ext.getLibFolderName() + "/", foundLibs));
         }
+        Optional.ofNullable(ext.getFixedManifestClasspath()).ifPresent(manifestClasspath -> {
+            if( manifestClasspath.trim().isEmpty() ){
+                return;
+            }
+            createJarParams.setClasspath(manifestClasspath);
+        });
 
         // https://docs.oracle.com/javase/8/docs/technotes/guides/deploy/manifest.html#JSDPG896
         if( ext.isAllPermissions() ){
