@@ -86,6 +86,7 @@ jfx {
     jfxMainAppJarName = "project-jfx.jar"
     deployDir = "src/main/deploy"
     useEnvironmentRelativeExecutables = true
+    libFolderName = "lib"
     
     // gradle jfxJar
     css2bin = false
@@ -95,6 +96,7 @@ jfx {
     manifestAttributes = null // Map<String, String>
     addPackagerJar = true
     copyAdditionalAppResourcesToJar = false
+    skipCopyingDependencies = false
 
     // gradle jfxNative
     identifier = null  // String - setting this for windows-bundlers makes it possible to generate upgradeable installers (using same GUID)
@@ -122,8 +124,9 @@ jfx {
     failOnError = false
     onlyCustomBundlers = false
     skipJNLP = false
-    skipNativeVersionNumberSanitizing = false
-    skipMainClassScanning = false
+    skipNativeVersionNumberSanitizing = false // anything than numbers or dots are removed
+    additionalJarsignerParameters = null // List<String>
+    skipMainClassScanning = false // set to true might increase build-speed
     
     skipNativeLauncherWorkaround124 = false
     skipNativeLauncherWorkaround167 = false
@@ -271,6 +274,7 @@ New:
 * added ability to fail the build on errors while bundling, just set `failOnError = true` inside the jfx-block
 * when having not specified any bundler, it now is possible to remove that JNLP-warning regarding "No OutFile Specificed", which makes that bundler being skipped, just set `skipJNLP = true` inside the jfx-block
 * added property to skip `nativeReleaseVersion` rewriting, just set `skipNativeVersionNumberSanitizing = true` inside the jfx-block
+* added `skipCopyingDependencies` to make it possible to NOT copying dependencies, but they are added to the classpath inside the manifest like normal
 
 Changes:
 * reimplemented `additionalBundlerResources`, now searching for folders with the name of the used bundler, makes it possible to adjust nearly all bundlers now (for Mac a special replacement-class was created, as the default one did not provide any way to add more files)
@@ -279,6 +283,7 @@ Enhancements:
 * updated all example-projects to use a different variable-name of the "current" plugin-version (fixes issue #40)
 * added warning about slow performance (even on SSD) when having ext4/btrfs filesystems using "deb"-bundler (fixes issue #41)
 * added warning about missing "jnlp.outfile"-property inside bundleArguments when using JNLP-bundler (from issue #42)
+* added ability to change name of the lib-folder by setting `libFolderName`
 
 Bugfixes:
 * added support for Gradle 3.3 (fixes issue #52)

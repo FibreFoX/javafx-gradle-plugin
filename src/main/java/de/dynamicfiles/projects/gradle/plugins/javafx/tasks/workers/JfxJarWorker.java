@@ -101,7 +101,7 @@ public class JfxJarWorker extends JfxAbstractWorker {
         }
         createJarParams.setManifestAttrs(manifestAttributes);
 
-        final File libDir = new File(getAbsoluteOrProjectRelativeFile(project, ext.getJfxAppOutputDir(), ext.isCheckForAbsolutePaths()), "lib");
+        final File libDir = new File(getAbsoluteOrProjectRelativeFile(project, ext.getJfxAppOutputDir(), ext.isCheckForAbsolutePaths()), ext.getLibFolderName());
         if( !libDir.exists() && !libDir.mkdirs() ){
             throw new GradleException("Unable to create app lib dir: " + libDir);
         }
@@ -118,15 +118,23 @@ public class JfxJarWorker extends JfxAbstractWorker {
         // copy dependencies
         // got inspiration from: http://opensourceforgeeks.blogspot.de/2015/05/knowing-gradle-dependency-jars-download.html
         Configuration compileConfiguration = project.getConfigurations().getByName("compile");
-        copyModuleDependencies(compileConfiguration, "compile", project, libDir, foundLibs);
-        copyFileDependencies(compileConfiguration, "compile", project, ext.isAddPackagerJar(), libDir, foundLibs);
+        if( !ext.isSkipCopyingDependencies() ){
+            copyModuleDependencies(compileConfiguration, "compile", project, libDir, foundLibs);
+            copyFileDependencies(compileConfiguration, "compile", project, ext.isAddPackagerJar(), libDir, foundLibs);
+        } else {
+            project.getLogger().info("Skipped copying compile dependencies");
+        }
 
         Configuration runtimeConfiguration = project.getConfigurations().getByName("runtime");
-        copyModuleDependencies(runtimeConfiguration, "runtime", project, libDir, foundLibs);
-        copyFileDependencies(runtimeConfiguration, "runtime", project, ext.isAddPackagerJar(), libDir, foundLibs);
+        if( !ext.isSkipCopyingDependencies() ){
+            copyModuleDependencies(runtimeConfiguration, "runtime", project, libDir, foundLibs);
+            copyFileDependencies(runtimeConfiguration, "runtime", project, ext.isAddPackagerJar(), libDir, foundLibs);
+        } else {
+            project.getLogger().info("Skipped copying runtime dependencies");
+        }
 
         if( !foundLibs.isEmpty() ){
-            createJarParams.setClasspath("lib/" + String.join(" lib/", foundLibs));
+            createJarParams.setClasspath(ext.getLibFolderName() + "/" + String.join(" " + ext.getLibFolderName() + "/", foundLibs));
         }
 
         // https://docs.oracle.com/javase/8/docs/technotes/guides/deploy/manifest.html#JSDPG896

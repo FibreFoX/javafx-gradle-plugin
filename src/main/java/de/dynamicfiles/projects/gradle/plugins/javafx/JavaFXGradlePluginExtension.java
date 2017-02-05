@@ -32,6 +32,7 @@ public class JavaFXGradlePluginExtension {
     private String jfxMainAppJarName = "project-jfx.jar";
     private String deployDir = "src/main/deploy";
     private boolean useEnvironmentRelativeExecutables = true;
+    private String libFolderName = "lib";
 
     // JarMojo
     private boolean css2bin = false;
@@ -43,6 +44,7 @@ public class JavaFXGradlePluginExtension {
     // private List<Dependency> classpathExcludes = new ArrayList<>();
     // private boolean classpathExcludesTransient = true;
     private boolean copyAdditionalAppResourcesToJar = false;
+    private boolean skipCopyingDependencies = false;
 
     // NativeMojo
     private String identifier = null;
@@ -153,6 +155,14 @@ public class JavaFXGradlePluginExtension {
         this.useEnvironmentRelativeExecutables = useEnvironmentRelativeExecutables;
     }
 
+    public String getLibFolderName() {
+        return libFolderName;
+    }
+
+    public void setLibFolderName(String libFolderName) {
+        this.libFolderName = libFolderName;
+    }
+
     public boolean isCss2bin() {
         return css2bin;
     }
@@ -207,6 +217,14 @@ public class JavaFXGradlePluginExtension {
 
     public void setCopyAdditionalAppResourcesToJar(boolean copyAdditionalAppResourcesToJar) {
         this.copyAdditionalAppResourcesToJar = copyAdditionalAppResourcesToJar;
+    }
+
+    public boolean isSkipCopyingDependencies() {
+        return skipCopyingDependencies;
+    }
+
+    public void setSkipCopyingDependencies(boolean skipCopyingDependencies) {
+        this.skipCopyingDependencies = skipCopyingDependencies;
     }
 
     public String getIdentifier() {
