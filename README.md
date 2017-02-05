@@ -97,6 +97,8 @@ jfx {
     addPackagerJar = true
     copyAdditionalAppResourcesToJar = false
     skipCopyingDependencies = false
+    useLibFolderContentForManifestClasspath = false
+    fixedManifestClasspath = null
 
     // gradle jfxNative
     identifier = null  // String - setting this for windows-bundlers makes it possible to generate upgradeable installers (using same GUID)
@@ -276,6 +278,7 @@ New:
 * added property to skip `nativeReleaseVersion` rewriting, just set `skipNativeVersionNumberSanitizing = true` inside the jfx-block
 * added `skipCopyingDependencies` to make it possible to NOT copying dependencies, but they are added to the classpath inside the manifest like normal
 * added `fixedManifestClasspath` for setting the classpath-entry inside the generated manifest-file in the main jfx-jar, this is already possible for secondary launchers by setting `classpath` within the configuration-block of the secondary launcher
+* added `useLibFolderContentForManifestClasspath` for creating the manifest-entriy for the classpath, depending on the content of the lib-folder, makes it possible to have files not being inside dependencies being present there (which got copied beforehand)
 
 Changes:
 * reimplemented `additionalBundlerResources`, now searching for folders with the name of the used bundler, makes it possible to adjust nearly all bundlers now (for Mac a special replacement-class was created, as the default one did not provide any way to add more files)

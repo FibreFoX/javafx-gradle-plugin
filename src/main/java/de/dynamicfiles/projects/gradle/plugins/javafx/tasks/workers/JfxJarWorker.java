@@ -133,14 +133,34 @@ public class JfxJarWorker extends JfxAbstractWorker {
             project.getLogger().info("Skipped copying runtime dependencies");
         }
 
-        if( !foundLibs.isEmpty() ){
-            createJarParams.setClasspath(ext.getLibFolderName() + "/" + String.join(" " + ext.getLibFolderName() + "/", foundLibs));
+        if( ext.isUseLibFolderContentForManifestClasspath() ){
+            StringBuilder scannedClasspath = new StringBuilder();
+            try{
+                Files.walkFileTree(libDir.toPath(), new SimpleFileVisitor<Path>() {
+                    @Override
+                    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                        scannedClasspath.append(file.toString().replace("\\", "/")).append(" ");
+                        return super.visitFile(file, attrs);
+                    }
+                });
+            } catch(IOException ioex){
+                project.getLogger().warn("Got problem while scanning lib-folder", ioex);
+            }
+            createJarParams.setClasspath(scannedClasspath.toString());
+        } else {
+            if( !foundLibs.isEmpty() ){
+                createJarParams.setClasspath(ext.getLibFolderName() + "/" + String.join(" " + ext.getLibFolderName() + "/", foundLibs));
+            }
         }
         Optional.ofNullable(ext.getFixedManifestClasspath()).ifPresent(manifestClasspath -> {
             if( manifestClasspath.trim().isEmpty() ){
                 return;
             }
             createJarParams.setClasspath(manifestClasspath);
+
+            if( ext.isUseLibFolderContentForManifestClasspath() ){
+                project.getLogger().warn("You specified to use the content of the lib-folder AND specified a fixed classpath. The fixed classpath will get taken.");
+            }
         });
 
         // https://docs.oracle.com/javase/8/docs/technotes/guides/deploy/manifest.html#JSDPG896

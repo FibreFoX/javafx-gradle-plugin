@@ -45,7 +45,7 @@ public class JavaFXGradlePluginExtension {
     // private boolean classpathExcludesTransient = true;
     private boolean copyAdditionalAppResourcesToJar = false;
     private boolean skipCopyingDependencies = false;
-    private boolean useLibFolderForManifestClasspath = false;
+    private boolean useLibFolderContentForManifestClasspath = false;
     private String fixedManifestClasspath = null;
 
     // NativeMojo
@@ -229,12 +229,12 @@ public class JavaFXGradlePluginExtension {
         this.skipCopyingDependencies = skipCopyingDependencies;
     }
 
-    public boolean isUseLibFolderForManifestClasspath() {
-        return useLibFolderForManifestClasspath;
+    public boolean isUseLibFolderContentForManifestClasspath() {
+        return useLibFolderContentForManifestClasspath;
     }
 
-    public void setUseLibFolderForManifestClasspath(boolean useLibFolderForManifestClasspath) {
-        this.useLibFolderForManifestClasspath = useLibFolderForManifestClasspath;
+    public void setUseLibFolderContentForManifestClasspath(boolean useLibFolderContentForManifestClasspath) {
+        this.useLibFolderContentForManifestClasspath = useLibFolderContentForManifestClasspath;
     }
 
     public String getFixedManifestClasspath() {
