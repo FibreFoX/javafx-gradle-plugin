@@ -139,7 +139,7 @@ public class JfxJarWorker extends JfxAbstractWorker {
                 Files.walkFileTree(libDir.toPath(), new SimpleFileVisitor<Path>() {
                     @Override
                     public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                        scannedClasspath.append(file.toString().replace("\\", "/")).append(" ");
+                        scannedClasspath.append(ext.getLibFolderName().replace("\\", "/")).append("/").append(libDir.toPath().relativize(file).toString().replace("\\", "/")).append(" ");
                         return super.visitFile(file, attrs);
                     }
                 });
