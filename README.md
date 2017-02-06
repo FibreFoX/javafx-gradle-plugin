@@ -238,7 +238,7 @@ Please look at the [examples-folder](/examples) to see some projects in action.
 Last Release Notes
 ==================
 
-**Version 8.8.0 (06-February-2017)**
+**Version 8.8.1 (06-February-2017)**
 
 Bugfixes:
 * added support for Gradle 3.3 (fixes issue #52)
