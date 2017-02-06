@@ -48,7 +48,7 @@ Please adjust your parameters accordingly:
 ```groovy
 buildscript {
     dependencies {
-        classpath group: 'de.dynamicfiles.projects.gradle.plugins', name: 'javafx-gradle-plugin', version: '8.7.0'
+        classpath group: 'de.dynamicfiles.projects.gradle.plugins', name: 'javafx-gradle-plugin', version: '8.8.1'
     }
     
     repositories {
@@ -173,7 +173,7 @@ Minimal setup of `build.gradle`
 ```groovy
 buildscript {
     dependencies {
-        classpath group: 'de.dynamicfiles.projects.gradle.plugins', name: 'javafx-gradle-plugin', version: '8.7.0'
+        classpath group: 'de.dynamicfiles.projects.gradle.plugins', name: 'javafx-gradle-plugin', version: '8.8.1'
     }
     repositories {
         mavenLocal()
@@ -217,7 +217,7 @@ When you report a bug and this got worked around, you might be able to have acce
 ```groovy
 buildscript {
     dependencies {
-        classpath group: 'de.dynamicfiles.projects.gradle.plugins', name: 'javafx-gradle-plugin', version: '8.7.0-SNAPSHOT'
+        classpath group: 'de.dynamicfiles.projects.gradle.plugins', name: 'javafx-gradle-plugin', version: '8.8.2-SNAPSHOT'
     }
     repositories {
         mavenLocal()
@@ -238,26 +238,7 @@ Please look at the [examples-folder](/examples) to see some projects in action.
 Last Release Notes
 ==================
 
-**Version 8.8.0 (08-Februrary-2017)**
-
-New:
-* `nativeReleaseVersion` will now get sanitized, anything than numbers and dots are removed, this ensures compatibility with the used bundler toolsets
-* when using `noBlobSigning = true` (which will get dropped with JDK9) the `jarsigner` executable will be used, but it was lacking proper customization, therefor a new property was introduced `additionalJarsignerParameters` which will be appended to all other stuff on the jarsigner-command
-* added ability to fail the build on errors while bundling, just set `failOnError = true` inside the jfx-block
-* when having not specified any bundler, it now is possible to remove that JNLP-warning regarding "No OutFile Specificed", which makes that bundler being skipped, just set `skipJNLP = true` inside the jfx-block
-* added property to skip `nativeReleaseVersion` rewriting, just set `skipNativeVersionNumberSanitizing = true` inside the jfx-block
-* added `skipCopyingDependencies` to make it possible to NOT copying dependencies, but they are added to the classpath inside the manifest like normal
-* added `fixedManifestClasspath` for setting the classpath-entry inside the generated manifest-file in the main jfx-jar, this is already possible for secondary launchers by setting `classpath` within the configuration-block of the secondary launcher
-* added `useLibFolderContentForManifestClasspath` for creating the manifest-entriy for the classpath, depending on the content of the lib-folder, makes it possible to have files not being inside dependencies being present there (which got copied beforehand)
-
-Changes:
-* reimplemented `additionalBundlerResources`, now searching for folders with the name of the used bundler, makes it possible to adjust nearly all bundlers now (for Mac a special replacement-class was created, as the default one did not provide any way to add more files)
-
-Enhancements:
-* updated all example-projects to use a different variable-name of the "current" plugin-version (fixes issue #40)
-* added warning about slow performance (even on SSD) when having ext4/btrfs filesystems using "deb"-bundler (fixes issue #41)
-* added warning about missing "jnlp.outfile"-property inside bundleArguments when using JNLP-bundler (from issue #42)
-* added ability to change name of the lib-folder by setting `libFolderName`
+**Version 8.8.0 (06-February-2017)**
 
 Bugfixes:
 * added support for Gradle 3.3 (fixes issue #52)
@@ -266,6 +247,6 @@ Bugfixes:
 (Not yet) Release(d) Notes
 ==========================
 
-upcoming Version 8.8.1 (???-2017)
+upcoming Version 8.8.2 (???-2017)
 
 *nothing changed yet*

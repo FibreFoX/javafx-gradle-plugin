@@ -1,7 +1,14 @@
 Release Notes
 =============
 
-# Version 8.8.0 (08-Februrary-2017)
+# Version 8.8.1 (06-February-2017)
+
+Bugfixes:
+* added support for Gradle 3.3 (fixes issue #52)
+
+
+
+# Version 8.8.0 (05-February-2017)
 
 New:
 * `nativeReleaseVersion` will now get sanitized, anything than numbers and dots are removed, this ensures compatibility with the used bundler toolsets
