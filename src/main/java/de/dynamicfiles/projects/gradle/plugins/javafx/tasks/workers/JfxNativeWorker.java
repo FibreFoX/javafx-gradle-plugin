@@ -209,7 +209,7 @@ public class JfxNativeWorker extends JfxAbstractWorker {
                         secondaryLauncherGenerationMap.put(StandardBundlerParam.USER_JVM_OPTIONS.getID(), new HashMap<>(userJvmOptions));
                     });
                     Optional.ofNullable(launcher.getLauncherArguments()).ifPresent(arguments -> {
-                        params.put(StandardBundlerParam.ARGUMENTS.getID(), new ArrayList<>(arguments));
+                        secondaryLauncherGenerationMap.put(StandardBundlerParam.ARGUMENTS.getID(), new ArrayList<>(arguments));
                     });
                     return secondaryLauncherGenerationMap;
                 }).collect(Collectors.toList()));
