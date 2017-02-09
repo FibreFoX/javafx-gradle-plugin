@@ -1,10 +1,17 @@
 Release Notes
 =============
 
+# Version 8.8.2 (09-February-2017)
+
+Bugfixes:
+* fixed `launcherArguments` of secondary launchers not being set correctly (fixes issue #55)
+
+
+
 # Version 8.8.1 (06-February-2017)
 
 Bugfixes:
-* added support for Gradle 3.3 (fixes issue #52)
+* fixed wrong calculated classpath when scanning the lib-folder was activated
 
 
 
