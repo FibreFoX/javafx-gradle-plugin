@@ -97,6 +97,12 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
     }
 
     private void addJavaFXAntJARToGradleBuildpath(Project project) {
+        // Detect JAVA_HOME environment variable
+        String javaHome = System.getenv("JAVA_HOME");
+        if (javaHome == null || "".equals(javaHome) || javaHome.trim().length() == 0) {
+            throw new GradleException("JAVA_HOME environment variable is not set, please refer to your OS documentation how to set it.");
+        }
+
         String jfxAntJarPath = "/../lib/" + ANT_JAVAFX_JAR_FILENAME;
 
         // on java 9, we have a different path
@@ -104,9 +110,12 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
             jfxAntJarPath = "/lib/" + ANT_JAVAFX_JAR_FILENAME;
         }
 
+        // Switched to search in env variables, because from java 8u131 you cannot change java.home properties due to tzdb.dat
+        // the new timezone system
+        File jfxAntJar = new File(javaHome + jfxAntJarPath);
         // always use ant-javafx.jar from the executing JDK (do not use environment-specific paths)
         // per spec "java.home" points to the JRE: https://docs.oracle.com/javase/tutorial/essential/environment/sysprop.html
-        File jfxAntJar = new File(System.getProperty("java.home") + jfxAntJarPath);
+//        File jfxAntJar = new File(System.getProperty("java.home") + jfxAntJarPath);
 
         if( !jfxAntJar.exists() ){
             throw new GradleException("Couldn't find Ant-JavaFX-library, please make sure you've installed some JDK which includes JavaFX (e.g. OracleJDK or OpenJDK and OpenJFX), and JAVA_HOME is set properly.");
