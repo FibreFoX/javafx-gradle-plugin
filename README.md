@@ -206,7 +206,7 @@ Customize Icons
 To customize the icons used in a native bundle, you have to provide the icons for the appropriate bundle.
 The icons must follow the file name convention in order to get picked up.
 
-> Tip: Set the `verbose` setting to true, to have log which files are picked up from your deploy directory.
+> Tip: Set the `verbose` setting to true, to log which files are picked up from your deploy directory.
 
 ## macOS
 Icon location: `src/main/delploy/macosx`
