@@ -41,12 +41,21 @@ public class JfxRunWorker extends JfxAbstractWorker {
 
         List<String> command = new ArrayList<>();
         command.add(getEnvironmentRelativeExecutablePath(ext.isUseEnvironmentRelativeExecutables()) + "java");
+
         Optional.ofNullable(ext.getRunJavaParameter()).ifPresent(runJavaParameter -> {
             if( runJavaParameter.trim().isEmpty() ){
                 return;
             }
             command.add(runJavaParameter);
         });
+
+        Optional.ofNullable(ext.getRunJavaParameters()).ifPresent(runJavaParameters -> {
+            if( runJavaParameters.isEmpty() ){
+                return;
+            }
+            command.addAll(runJavaParameters);
+        });
+
         command.add("-jar");
         command.add(ext.getJfxMainAppJarName());
         Optional.ofNullable(ext.getRunAppParameter()).ifPresent(runAppParameter -> {
