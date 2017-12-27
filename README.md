@@ -209,7 +209,7 @@ The icons must follow the file name convention in order to get picked up.
 > Tip: Set the `verbose` setting to true, to log which files are picked up from your deploy directory.
 
 ## macOS
-Icon location: `src/main/delploy/macosx`
+Icon location: `src/main/deploy/package/macosx`
 
 In macOS you can provide up to three different icons.
 * .app icon
@@ -228,7 +228,7 @@ The icon sizes should follow the specified sizes.
 http://iconhandbook.co.uk/reference/chart/osx/
 
 ## Linux
-Icon location: `src/main/deploy/linux`
+Icon location: `src/main/deploy/package/linux`
 
 For Linux you can provide one icon.
 
@@ -242,7 +242,7 @@ The icon file name is depended on your `appName` setting of this plugin.
 For example a name like 'foo Bar' will lookup for a icon like 'fooBar.png'
 
 ## Windows
-Icon location: `src/main/deploy/windows`
+Icon location: `src/main/deploy/package/windows`
 
 For Windows you can provide two different icons.
 * application icon
