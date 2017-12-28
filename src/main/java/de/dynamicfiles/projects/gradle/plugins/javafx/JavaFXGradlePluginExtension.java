@@ -100,6 +100,8 @@ public class JavaFXGradlePluginExtension {
     private String runJavaParameter = null;
     private String runAppParameter = null;
 
+    private List<String> runJavaParameters = null;
+
     // generic settings (not present on javafx-maven-plugin)
     private String alternativePathToJarFile = null;
     private boolean usePatchedJFXAntLib = true;
@@ -629,4 +631,11 @@ public class JavaFXGradlePluginExtension {
         this.checkForAbsolutePaths = checkForAbsolutePaths;
     }
 
+    public List<String> getRunJavaParameters() {
+        return runJavaParameters;
+    }
+
+    public void setRunJavaParameters(List<String> runJavaParameters) {
+        this.runJavaParameters = runJavaParameters;
+    }
 }
