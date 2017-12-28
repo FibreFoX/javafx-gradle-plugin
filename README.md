@@ -200,6 +200,60 @@ jfx {
 }
 ```
 
+Customize Icons
+===============
+
+To customize the icons used in a native bundle, you have to provide the icons for the appropriate bundle.
+The icons must follow the file name convention in order to get picked up.
+
+> Tip: Set the `verbose` setting to true, to log which files are picked up from your deploy directory.
+
+## macOS
+Icon location: `src/main/deploy/package/macosx`
+
+In macOS you can provide up to three different icons.
+* .app icon
+* volume icon
+* the background of the window, when opening the dmg volume
+
+The icon file name is depended on your `appName` setting of this plugin.
+
+| Type              | Filename                  |
+| :---------------- |:------------------------- |
+| .app icon         | \<appName>.icns           |
+| volume icon       | \<appName>-volume.icns    |
+| volume background | \<appName>-background.png |
+
+The icon sizes should follow the specified sizes.
+http://iconhandbook.co.uk/reference/chart/osx/
+
+## Linux
+Icon location: `src/main/deploy/package/linux`
+
+For Linux you can provide one icon.
+
+The icon file name is depended on your `appName` setting of this plugin.
+
+| Type              | Filename        |
+| :---------------- |:--------------- |
+| application icon  | \<appName>.png  |
+
+>Whitespaces in the `appName` will be removed in order to lookup for the icon.
+For example a name like 'foo Bar' will lookup for a icon like 'fooBar.png'
+
+## Windows
+Icon location: `src/main/deploy/package/windows`
+
+For Windows you can provide two different icons.
+* application icon
+* setup icon - the icon of the installer
+
+| Type              | Filename                  |
+| :---------------- |:------------------------- |
+| .exe icon         | \<appName>.ico            |
+| setup exe icon    | \<appName>-setup-icon.bmp |
+
+
 Gradle Tasks
 ============
 
