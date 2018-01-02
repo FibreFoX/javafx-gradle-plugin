@@ -116,7 +116,7 @@ jfx {
         // dont bundle JRE (not recommended, but increases build-size/-speed)
         runtime: null
     ]
-    appName = "project" // this is used for files below "src/main/deploy", e.g. "src/main/deploy/windows/project.ico"
+    appName = "project" // this is used for files below "src/main/deploy", e.g. "src/main/deploy/package/windows/project.ico"
     additionalBundlerResources = null // path to some additional resources for the bundlers when creating application-bundle
     additionalAppResources = null // path to some additional resources when creating application-bundle
     secondaryLaunchers = [[appName:"somethingDifferent"], [appName:"somethingDifferent2"]]
