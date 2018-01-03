@@ -30,7 +30,14 @@ dependencies {
     compile gradleApi()
     testCompile gradleTestKit()
     testCompile group: 'org.testng', name: 'testng', version: '6.10'
-    compile files("${System.properties['java.home']}/../lib/ant-javafx.jar")
+    // java 8
+    if( file("${System.properties['java.home']}/../lib/ant-javafx.jar").exists() ){
+        compile files("${System.properties['java.home']}/../lib/ant-javafx.jar")
+    }
+    // java 9
+    if( file("${System.properties['java.home']}/lib/ant-javafx.jar").exists() ){
+        compile files("${System.properties['java.home']}/lib/ant-javafx.jar")
+    }
     compile 'org.ow2.asm:asm-all:5.1'
     runtime 'org.ow2.asm:asm-all:5.1'
 }
@@ -139,6 +146,43 @@ uploadArchives {
                         id 'FibreFoX'
                         name 'Danny Althoff'
                         email 'fibrefox@dynamicfiles.de'
+                    }
+                }
+
+                profiles {
+                    profile {
+                        id 'java9-dependencies'
+                        activation {
+                            file {
+                                exists '${java.home}/lib/ant-javafx.jar'
+                            }
+                        }
+                        dependencies {
+                            dependency {
+                                groupId 'javafx-packager'
+                                artifactId 'javafx-packager'
+                                version '9'
+                                scope 'system'
+                                systemPath '${java.home}/lib/ant-javafx.jar'
+                            }
+                        }
+                    }
+                    profile {
+                        id 'java8-dependencies'
+                        activation {
+                            file {
+                                exists '${java.home}/../lib/ant-javafx.jar'
+                            }
+                        }
+                        dependencies {
+                            dependency {
+                                groupId 'javafx-packager'
+                                artifactId 'javafx-packager'
+                                version '1.8'
+                                scope 'system'
+                                systemPath '${java.home}/../lib/ant-javafx.jar'
+                            }
+                        }
                     }
                 }
             }
