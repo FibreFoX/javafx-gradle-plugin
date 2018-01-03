@@ -49,8 +49,8 @@ public abstract class ExampleProjectTest {
     public static void readVersionString() throws IOException {
         List<String> versionFileLines = Files.readAllLines(new File("version.gradle").toPath());
         versionFileLines.forEach(line -> {
-            if( line.contains("currentPluginVersion") ){
-                versionString = line.replace("currentPluginVersion", "").replace("=", "").replace("'", "").trim();
+            if( line.contains("javafxGradlePluginVersion") ){
+                versionString = line.replace("javafxGradlePluginVersion", "").replace("=", "").replace("'", "").trim();
             }
         });
     }
