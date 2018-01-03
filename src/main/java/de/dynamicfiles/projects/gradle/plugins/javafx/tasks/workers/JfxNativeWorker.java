@@ -22,16 +22,13 @@ import com.oracle.tools.packager.ConfigException;
 import com.oracle.tools.packager.RelativeFileSet;
 import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.UnsupportedPlatformException;
-import com.oracle.tools.packager.linux.LinuxDebBundler;
-import com.oracle.tools.packager.linux.LinuxRpmBundler;
-import com.oracle.tools.packager.windows.WinExeBundler;
-import com.oracle.tools.packager.windows.WinMsiBundler;
 import com.sun.javafx.tools.packager.PackagerException;
 import com.sun.javafx.tools.packager.PackagerLib;
 import com.sun.javafx.tools.packager.SignJarParams;
 import de.dynamicfiles.projects.gradle.plugins.javafx.JavaFXGradlePluginExtension;
 import de.dynamicfiles.projects.gradle.plugins.javafx.dto.FileAssociation;
 import de.dynamicfiles.projects.gradle.plugins.javafx.dto.NativeLauncher;
+import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.internal.ParameterMapEntries;
 import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.internal.Workarounds;
 import java.io.File;
 import java.io.IOException;
@@ -460,11 +457,11 @@ public class JfxNativeWorker extends JfxAbstractWorker {
                         skipCopyAdditionalBundlerResources = true;
                         break;
                     case "exe":
-                        File exeBundlerFolder = WinExeBundler.EXE_IMAGE_DIR.fetchFrom(paramsToBundleWith);
+                        File exeBundlerFolder = ParameterMapEntries.EXE_IMAGE_DIR.fetchFrom(paramsToBundleWith);
                         targetFolder = exeBundlerFolder.toPath();
                         break;
                     case "msi":
-                        File msiBundlerFolder = WinMsiBundler.MSI_IMAGE_DIR.fetchFrom(paramsToBundleWith);
+                        File msiBundlerFolder = ParameterMapEntries.MSI_IMAGE_DIR.fetchFrom(paramsToBundleWith);
                         targetFolder = msiBundlerFolder.toPath();
                         break;
                     case "windows.service":
@@ -509,11 +506,11 @@ public class JfxNativeWorker extends JfxAbstractWorker {
                         skipCopyAdditionalBundlerResources = true;
                         break;
                     case "deb":
-                        File linuxDebBundlerFolder = LinuxDebBundler.DEB_IMAGE_DIR.fetchFrom(paramsToBundleWith);
+                        File linuxDebBundlerFolder = ParameterMapEntries.DEB_IMAGE_DIR.fetchFrom(paramsToBundleWith);
                         targetFolder = linuxDebBundlerFolder.toPath();
                         break;
                     case "rpm":
-                        File linuxRpmBundlerFolder = LinuxRpmBundler.RPM_IMAGE_DIR.fetchFrom(paramsToBundleWith);
+                        File linuxRpmBundlerFolder = ParameterMapEntries.RPM_IMAGE_DIR.fetchFrom(paramsToBundleWith);
                         targetFolder = linuxRpmBundlerFolder.toPath();
                         break;
                     default:
