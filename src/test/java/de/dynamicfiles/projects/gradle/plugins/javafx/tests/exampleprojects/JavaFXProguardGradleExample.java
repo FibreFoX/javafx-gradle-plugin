@@ -15,6 +15,7 @@
  */
 package de.dynamicfiles.projects.gradle.plugins.javafx.tests.exampleprojects;
 
+import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.internal.JavaDetectionTools;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -38,6 +39,9 @@ public class JavaFXProguardGradleExample extends ExampleProjectTest {
 
     @Test
     public void javafxProguardGradleJfxJar() {
+        if( JavaDetectionTools.IS_JAVA_9 ){
+            return;
+        }
         GRADLE_VERSIONS_TO_TEST_AGAINST.forEach(gradleVersion -> {
             GradleRunner runner = GradleRunner.create().withGradleVersion(gradleVersion).forwardOutput();
 
@@ -62,6 +66,9 @@ public class JavaFXProguardGradleExample extends ExampleProjectTest {
 
     @Test
     public void javafxProguardGradleJfxNative() {
+        if( JavaDetectionTools.IS_JAVA_9 ){
+            return;
+        }
         GRADLE_VERSIONS_TO_TEST_AGAINST.forEach(gradleVersion -> {
             GradleRunner runner = GradleRunner.create().withGradleVersion(gradleVersion).forwardOutput();
 
