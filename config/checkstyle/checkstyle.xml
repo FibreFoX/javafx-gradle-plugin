@@ -36,7 +36,8 @@
     <module name="ParameterName"/>
     <module name="RedundantImport"/>
     <module name="RedundantModifier"/>
-    <module name="RedundantThrows"/>
+    <!-- not compatible with newer checkstyles -->
+    <!-- <module name="RedundantThrows"/> -->
     <module name="StringLiteralEquality"/>
     <module name="SuppressWarningsHolder" />
     <module name="UpperEll"/>
