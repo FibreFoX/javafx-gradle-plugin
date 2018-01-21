@@ -71,6 +71,7 @@ script:
 branches:
   only:
   - master
+  - newyear2018release
 
 notifications:
   email: false
