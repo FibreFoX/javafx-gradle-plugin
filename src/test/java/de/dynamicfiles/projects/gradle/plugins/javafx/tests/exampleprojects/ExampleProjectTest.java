@@ -15,6 +15,7 @@
  */
 package de.dynamicfiles.projects.gradle.plugins.javafx.tests.exampleprojects;
 
+import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.internal.JavaDetectionTools;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -38,10 +39,12 @@ public abstract class ExampleProjectTest {
     protected static final List<String> GRADLE_VERSIONS_TO_TEST_AGAINST = new ArrayList<>();
 
     static {
-        GRADLE_VERSIONS_TO_TEST_AGAINST.add("2.10");
-        GRADLE_VERSIONS_TO_TEST_AGAINST.add("3.0");
-        // this version removed "org.gradle.internal.classloader.ClasspathUtil"
-        GRADLE_VERSIONS_TO_TEST_AGAINST.add("3.3");
+        if(JavaDetectionTools.IS_JAVA_8){
+            GRADLE_VERSIONS_TO_TEST_AGAINST.add("2.10");
+            GRADLE_VERSIONS_TO_TEST_AGAINST.add("3.0");
+            // this version removed "org.gradle.internal.classloader.ClasspathUtil"
+            GRADLE_VERSIONS_TO_TEST_AGAINST.add("3.3");
+        }
         GRADLE_VERSIONS_TO_TEST_AGAINST.add("4.41");
     }
 
