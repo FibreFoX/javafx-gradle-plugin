@@ -45,7 +45,7 @@ public abstract class ExampleProjectTest {
             // this version removed "org.gradle.internal.classloader.ClasspathUtil"
             GRADLE_VERSIONS_TO_TEST_AGAINST.add("3.3");
         }
-        GRADLE_VERSIONS_TO_TEST_AGAINST.add("4.41");
+        GRADLE_VERSIONS_TO_TEST_AGAINST.add("4.4.1");
     }
 
     protected static String versionString = "+";
