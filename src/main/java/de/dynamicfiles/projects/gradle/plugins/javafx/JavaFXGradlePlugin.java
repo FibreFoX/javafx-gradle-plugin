@@ -29,7 +29,10 @@ import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import org.gradle.api.GradleException;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
@@ -97,20 +100,22 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
     }
 
     private void addJavaFXAntJARToGradleBuildpath(Project project) {
-        String jfxAntJarPath = "/../lib/" + ANT_JAVAFX_JAR_FILENAME;
-
-        // on java 9, we have a different path
-        if( JavaDetectionTools.IS_JAVA_9 ){
-            jfxAntJarPath = "/lib/" + ANT_JAVAFX_JAR_FILENAME;
-        }
-
+        File javaHome = new File(System.getProperty("java.home"));
+      
         // always use ant-javafx.jar from the executing JDK (do not use environment-specific paths)
         // per spec "java.home" points to the JRE: https://docs.oracle.com/javase/tutorial/essential/environment/sysprop.html
-        File jfxAntJar = new File(System.getProperty("java.home") + jfxAntJarPath);
+        Optional<File> jfxAntJarOptional = Stream.of(javaHome, javaHome.getParentFile())
+            .map(jh->new File(jh, "lib"))
+            .map(lib->new File(lib, ANT_JAVAFX_JAR_FILENAME))
+            .filter(File::isFile)
+            .findFirst();
 
-        if( !jfxAntJar.exists() ){
+
+        if( !jfxAntJarOptional.isPresent() ){
             throw new GradleException("Couldn't find Ant-JavaFX-library, please make sure you've installed some JDK which includes JavaFX (e.g. OracleJDK or OpenJDK and OpenJFX), and JAVA_HOME is set properly.");
         }
+
+        File jfxAntJar = jfxAntJarOptional.get();
 
         // don't use SystemClassloader or current Thread-ClassLoader, as we are not maven here ;)
         ClassLoader buildscriptClassloader = project.getBuildscript().getClassLoader();
