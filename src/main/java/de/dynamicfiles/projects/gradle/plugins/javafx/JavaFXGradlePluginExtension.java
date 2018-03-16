@@ -15,6 +15,8 @@
  */
 package de.dynamicfiles.projects.gradle.plugins.javafx;
 
+import de.dynamicfiles.projects.gradle.plugins.javafx.tasks.internal.JavaDetectionTools;
+
 import java.util.List;
 import java.util.Map;
 
@@ -40,7 +42,8 @@ public class JavaFXGradlePluginExtension {
     private boolean updateExistingJar = false;
     private boolean allPermissions = false;
     private Map<String, String> manifestAttributes = null;
-    private boolean addPackagerJar = true;
+    // NB! There is no 'packager.jar' in Java 9 and later. Only copy the jar if using Java 8.
+    private boolean addPackagerJar = JavaDetectionTools.IS_JAVA_8;
     // private List<Dependency> classpathExcludes = new ArrayList<>();
     // private boolean classpathExcludesTransient = true;
     private boolean copyAdditionalAppResourcesToJar = false;
