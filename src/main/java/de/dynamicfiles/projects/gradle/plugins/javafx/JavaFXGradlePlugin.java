@@ -100,7 +100,7 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
         String jfxAntJarPath = "/../lib/" + ANT_JAVAFX_JAR_FILENAME;
 
         // on java 9, we have a different path
-        if( JavaDetectionTools.IS_JAVA_9 ){
+        if( JavaDetectionTools.IS_JAVA_9 || JavaDetectionTools.IS_JAVA_10 ){
             jfxAntJarPath = "/lib/" + ANT_JAVAFX_JAR_FILENAME;
         }
 

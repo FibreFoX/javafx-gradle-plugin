@@ -21,7 +21,8 @@ package de.dynamicfiles.projects.gradle.plugins.javafx.tasks.internal;
 public class JavaDetectionTools {
 
     public static final boolean IS_JAVA_8 = isJavaVersion(8);
-    public static final boolean IS_JAVA_9 = !IS_JAVA_8 && isJavaVersion(9) || isJavaVersion(9, true);
+    public static final boolean IS_JAVA_9 = !IS_JAVA_8 && (isJavaVersion(9) || isJavaVersion(9, true));
+    public static final boolean IS_JAVA_10 = !IS_JAVA_8 && !IS_JAVA_9 && (isJavaVersion(10) || isJavaVersion(10, true));
 
     public static boolean isJavaVersion(int oracleJavaVersion, boolean noVersionOne) {
         String javaVersion = System.getProperty("java.version");
