@@ -1,3 +1,6 @@
 /.gradle
 /.nb-gradle
 build
+.DS_Store
+/.idea
+/javafx-gradle-plugin.iml

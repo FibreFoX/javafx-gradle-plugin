@@ -117,21 +117,10 @@ public class JfxJarWorker extends JfxAbstractWorker {
 
         // copy dependencies
         // got inspiration from: http://opensourceforgeeks.blogspot.de/2015/05/knowing-gradle-dependency-jars-download.html
-        Configuration compileConfiguration = project.getConfigurations().getByName("compile");
-        if( !ext.isSkipCopyingDependencies() ){
-            copyModuleDependencies(compileConfiguration, "compile", project, libDir, foundLibs);
-            copyFileDependencies(compileConfiguration, "compile", project, ext.isAddPackagerJar(), libDir, foundLibs);
-        } else {
-            project.getLogger().info("Skipped copying compile dependencies");
-        }
-
-        Configuration runtimeConfiguration = project.getConfigurations().getByName("runtime");
-        if( !ext.isSkipCopyingDependencies() ){
-            copyModuleDependencies(runtimeConfiguration, "runtime", project, libDir, foundLibs);
-            copyFileDependencies(runtimeConfiguration, "runtime", project, ext.isAddPackagerJar(), libDir, foundLibs);
-        } else {
-            project.getLogger().info("Skipped copying runtime dependencies");
-        }
+        copyDependencies(project, "compile", libDir, foundLibs, ext);
+        copyDependencies(project, "runtime", libDir, foundLibs, ext);
+        copyDependencies(project, "implementation", libDir, foundLibs, ext);
+        copyDependencies(project, "api", libDir, foundLibs, ext);
 
         if( ext.isUseLibFolderContentForManifestClasspath() ){
             StringBuilder scannedClasspath = new StringBuilder();
@@ -263,6 +252,22 @@ public class JfxJarWorker extends JfxAbstractWorker {
                 project.getLogger().warn("Couldn't copy dependency " + someFile.getName(), ex);
             }
         });
+    }
+
+    private void copyDependencies(
+        Project project,
+        String configName,
+        File libDir,
+        Set<String> foundLibs,
+        JavaFXGradlePluginExtension ext
+    ) {
+        Configuration compileConfiguration = project.getConfigurations().getByName(configName);
+        if( !ext.isSkipCopyingDependencies() ){
+            copyModuleDependencies(compileConfiguration, configName, project, libDir, foundLibs);
+            copyFileDependencies(compileConfiguration, configName, project, ext.isAddPackagerJar(), libDir, foundLibs);
+        } else {
+            project.getLogger().info(String.format("Skipped copying %s dependencies", configName));
+        }
     }
 
 }
