@@ -113,7 +113,8 @@ jfx {
     needShortcut = false
     needMenu = false
     bundleArguments = [
-        // dont bundle JRE (not recommended, but increases build-size/-speed)
+        // Rely on local JRE instead of bundling the JRE as part of the app--not reccomended.
+        // ++buildSpeed; --appSize; --control; ++dependencyHell
         runtime: null
     ]
     appName = "project" // this is used for files below "src/main/deploy", e.g. "src/main/deploy/package/windows/project.ico"
