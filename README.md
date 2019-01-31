@@ -104,7 +104,7 @@ jfx {
     identifier = null  // String - setting this for windows-bundlers makes it possible to generate upgradeable installers (using same GUID)
     vendor = "some serious business corp."
     nativeOutputDir = "build/jfx/native"
-    bundler = "ALL" // set this to some specific, if your don't want all bundlers running, examples "windows.app", "jnlp", ...
+    bundler = "ALL" // Set this to something specific, if your don't want all bundlers running. To see which bundlers are available on your OS, run the jfxListBundlers gradle task. Examples: "windows.app", "jnlp", ...
     jvmProperties = null // Map<String, String>
     jvmArgs = null // List<String>
     userJvmArgs = null // Map<String, String>
