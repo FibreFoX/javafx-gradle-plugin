@@ -30,9 +30,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
-import org.gradle.api.GradleException;
-import org.gradle.api.Plugin;
-import org.gradle.api.Project;
+
+import org.gradle.api.*;
 
 /**
  *
@@ -51,11 +50,11 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
         // gradle is lame, so replace existing tasks with MY NAMES ! *battle-cry*
 
         // tasks will be available for the buldscript prior full evaluation
-        JfxJarTask jarTask = project.getTasks().replace(JfxJarTask.JFX_TASK_NAME, JfxJarTask.class);
-        JfxNativeTask nativeTask = project.getTasks().replace(JfxNativeTask.JFX_TASK_NAME, JfxNativeTask.class);
-        JfxGenerateKeystoreTask generateKeystoreTask = project.getTasks().replace(JfxGenerateKeystoreTask.JFX_TASK_NAME, JfxGenerateKeystoreTask.class);
-        JfxRunTask runTask = project.getTasks().replace(JfxRunTask.JFX_TASK_NAME, JfxRunTask.class);
-        JfxListBundlersTask jfxListBundlersTask = project.getTasks().replace(JfxListBundlersTask.JFX_TASK_NAME, JfxListBundlersTask.class);
+        JfxJarTask jarTask = setTask(project, JfxJarTask.JFX_TASK_NAME, JfxJarTask.class);
+        JfxNativeTask nativeTask = setTask(project, JfxNativeTask.JFX_TASK_NAME, JfxNativeTask.class);
+        JfxGenerateKeystoreTask generateKeystoreTask = setTask(project, JfxGenerateKeystoreTask.JFX_TASK_NAME, JfxGenerateKeystoreTask.class);
+        JfxRunTask runTask = setTask(project, JfxRunTask.JFX_TASK_NAME, JfxRunTask.class);
+        JfxListBundlersTask jfxListBundlersTask = setTask(project, JfxListBundlersTask.JFX_TASK_NAME, JfxListBundlersTask.class);
 
         String taskGroupName = "JavaFX";
 
@@ -94,6 +93,17 @@ public class JavaFXGradlePlugin implements Plugin<Project> {
             // https://discuss.gradle.org/t/how-to-bootstrapp-buildscript-classpath-cannot-change-configuration-classpath-after-it-has-been-resolved/7442
             addJavaFXAntJARToGradleBuildpath(evaluatedProject);
         });
+    }
+
+    private <T extends Task> T setTask(Project project, String taskName, Class<T> taskType) {
+        T task;
+        try {
+            project.getTasks().getByName(taskName);
+            task = project.getTasks().replace(taskName, taskType);
+        } catch (UnknownTaskException e) {
+            task = project.getTasks().create(taskName, taskType);
+        }
+        return task;
     }
 
     private void addJavaFXAntJARToGradleBuildpath(Project project) {
